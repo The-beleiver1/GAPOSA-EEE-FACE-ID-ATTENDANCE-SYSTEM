@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Python virtual environment
+face-server/venv/
+face-server/__pycache__/
+face-server/*.pyc
+face-server/models/
+
+# Build output
+dist/
+
+# Environment — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Vite
+vite.config.js.timestamp-*

@@ -1,0 +1,26 @@
+{
+  "name": "GAPOSA EEE Face-ID",
+  "short_name": "EEE Face-ID",
+  "description": "Electrical / Electronics Engineering attendance system powered by face recognition",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1F6F5F",
+  "theme_color": "#1F6F5F",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["education", "productivity"]
+}

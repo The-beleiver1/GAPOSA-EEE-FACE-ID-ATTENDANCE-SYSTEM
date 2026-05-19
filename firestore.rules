@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn()   { return request.auth != null; }
+    function uid()          { return request.auth.uid; }
+    function userDoc()      { return get(/databases/$(database)/documents/users/$(uid())); }
+    function role()         { return userDoc().data.role; }
+    function isAdmin()      { return isSignedIn() && role() == 'admin'; }
+    function isLecturer()   { return isSignedIn() && role() == 'lecturer'; }
+    function isApproved()   { return isLecturer() && userDoc().data.status == 'approved'; }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (uid() == userId || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if isAdmin() || uid() == userId;
+      allow delete: if isAdmin();
+    }
+
+    // Master list — admin write, signed-in read
+    match /masterList/{matric} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Enrolled students — anyone can write (self-enrollment), signed-in users can read
+    match /students/{matric} {
+      allow read:   if isSignedIn();
+      allow write:  if true;
+    }
+
+    // Attendance records
+    match /attendance/{docId} {
+      allow read:   if isSignedIn();
+      allow create: if isApproved() || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Courses
+    match /courses/{courseId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Settings
+    match /settings/{doc} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

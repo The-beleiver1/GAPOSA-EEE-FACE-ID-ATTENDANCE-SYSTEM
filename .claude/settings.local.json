@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\\\\src\\\\pages\")",
+      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); ['Gauge','ListChecks','NotepadText','GraduationCap','FileEdit','ScrollText','ClipboardPen','PencilLine','FilePen','Notebook'].forEach\\(n => console.log\\(n, !!l[n]\\)\\)\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Read(//c/Users/Dell/Downloads/**)",
+      "Bash(bar-chart-3)",
+      "Bash(clipboard-x)",
+      "Bash(settings-2)",
+      "Bash(hard-drive\" 2>/dev/null | head -20)",
+      "Bash(npx supabase *)",
+      "Bash(dir \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\\\\src\\\\services\")",
+      "Bash(npx vite *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\\\\.github\\\\workflows\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"done\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(dir \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\\\\public\" /a)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(git count-objects *)",
+      "Bash(git rm *)",
+      "Bash(git reset *)",
+      "Bash(git update-ref *)",
+      "Bash(git gc *)"
+    ]
+  }
+}
