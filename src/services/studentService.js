@@ -167,10 +167,12 @@ export async function checkDuplicateFace(newFaceImage, currentMatric) {
         matric:      result.matched_matric,
         name:        result.matched_name,
         similarity:  result.similarity,
+        embedding:   result.embedding || null,
       }
     }
 
-    return null
+    // Return embedding so caller can skip a second /embed/batch call
+    return { isDuplicate: false, embedding: result.embedding || null }
 
   } catch (err) {
     if (DEV) console.error('[checkDuplicateFace] Error:', err.message)

@@ -51,9 +51,10 @@ class BatchEmbedResponse(BaseModel):
 
 class DeduplicateResponse(BaseModel):
     is_duplicate:    bool
-    matched_matric:  Optional[str]  = None
-    matched_name:    Optional[str]  = None
-    similarity:      Optional[float]= None
+    matched_matric:  Optional[str]        = None
+    matched_name:    Optional[str]        = None
+    similarity:      Optional[float]      = None
+    embedding:       Optional[list[float]]= None
     message:         str
 
 # ── Helpers ───────────────────────────────────────────────────────
@@ -192,12 +193,14 @@ async def deduplicate(request: DeduplicateRequest):
             matched_matric = best_match.matric,
             matched_name   = best_match.name,
             similarity     = round(best_similarity, 4),
+            embedding      = new_embedding,
             message        = f"Face matches existing enrollment: {best_match.name} ({best_match.matric})"
         )
 
     return DeduplicateResponse(
         is_duplicate = False,
         similarity   = round(best_similarity, 4),
+        embedding    = new_embedding,
         message      = f"No duplicate found. Best similarity was {best_similarity:.4f}"
     )
 

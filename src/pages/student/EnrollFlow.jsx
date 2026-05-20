@@ -23,10 +23,10 @@ import img3 from "@/assets/sun-setting-silhouette-electricity-pylons.jpg"
 
 const SLIDES = [img1, img2, img3]
 
-const EAR_BLINK_THRESHOLD = 0.22
-const TURN_THRESHOLD      = 0.28
-const NOD_THRESHOLD       = 18
-const NORMAL_HOLD_FRAMES  = 30
+const EAR_BLINK_THRESHOLD = 0.26
+const TURN_THRESHOLD      = 0.25
+const NOD_THRESHOLD       = 15
+const NORMAL_HOLD_FRAMES  = 20
 
 const lastSpoken = { text: '', time: 0 }
 function speak(text, force = false) {
@@ -485,9 +485,12 @@ export function EnrollCamera() {
   function captureSnapshot(videoEl) {
     const v=videoEl||videoRef.current; if(!v) return null
     const c=document.createElement('canvas')
-    c.width=v.videoWidth||640; c.height=v.videoHeight||480
-    c.getContext('2d').drawImage(v,0,0)
-    return c.toDataURL('image/jpeg',0.92)
+    // Cap at 640×480 — ArcFace resizes internally; smaller = faster upload
+    const scale=Math.min(1,640/(v.videoWidth||640))
+    c.width=Math.round((v.videoWidth||640)*scale)
+    c.height=Math.round((v.videoHeight||480)*scale)
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height)
+    return c.toDataURL('image/jpeg',0.78)
   }
 
   function resetLivenessTrackers() {
@@ -641,9 +644,8 @@ export function EnrollCamera() {
     setShowPreview(false); setSubmitting(true); setDuplicateError('')
 
     try {
-      // Step 1 — Check for duplicate face using Python /deduplicate
-      // Pass the captured photo image directly — Python generates embedding + compares
-      setSubmitStatus('Checking for duplicates…')
+      // Step 1 — Check for duplicate + get embedding in one server call
+      setSubmitStatus('Verifying face…')
       const duplicate = await checkDuplicateFace(step1PhotoRef.current, student.matric)
 
       if (duplicate?.isDuplicate) {
@@ -652,9 +654,11 @@ export function EnrollCamera() {
         return
       }
 
-      // Step 2 — Generate ArcFace embeddings for storage
-      setSubmitStatus('Generating face embeddings…')
-      const embeddings = await getEmbeddingsFromServer(step1FramesRef.current)
+      // Step 2 — Reuse embedding from deduplicate response; fallback to separate call only if missing
+      setSubmitStatus('Saving enrollment…')
+      const embeddings = duplicate?.embedding
+        ? [duplicate.embedding]
+        : await getEmbeddingsFromServer(step1FramesRef.current)
 
       // Step 3 — Save to Supabase
       setSubmitStatus('Saving enrollment…')
