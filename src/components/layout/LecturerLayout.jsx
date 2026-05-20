@@ -116,6 +116,39 @@ export function LecturerLayout({ children }) {
         </main>
       </div>
 
+      {/* ── Mobile bottom nav ── */}
+      <nav className="flex lg:hidden" style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: '#1F6F5F', borderTop: '1px solid rgba(255,255,255,0.12)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
+        {[
+          { to: '/lecturer',            label: 'Scan',       Icon: Scan,          end: true  },
+          { to: '/lecturer/attendance', label: 'Attendance', Icon: CalendarCheck, end: false },
+          { to: '/lecturer/students',   label: 'Students',   Icon: Users,         end: false },
+          { to: '/lecturer/courses',    label: 'Courses',    Icon: BookOpen,      end: false },
+          { to: '/lecturer/profile',    label: 'Profile',    Icon: CircleUser,    end: false },
+        ].map(({ to, label, Icon, end }) => (
+          <NavLink key={to} to={to} end={end}
+            style={({ isActive }) => ({
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', padding: '0.55rem 0 0.5rem',
+              textDecoration: 'none', gap: '0.2rem',
+              color: isActive ? '#6FCF97' : 'rgba(255,255,255,0.5)',
+              borderTop: isActive ? '2px solid #6FCF97' : '2px solid transparent',
+              fontSize: '0.58rem', fontWeight: isActive ? 700 : 500,
+              transition: 'color 0.15s',
+            })}>
+            {({ isActive }) => (
+              <>
+                <Icon size={19} strokeWidth={isActive ? 2.2 : 1.7} />
+                <span>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; font-family: 'Geologica', system-ui, sans-serif; }
