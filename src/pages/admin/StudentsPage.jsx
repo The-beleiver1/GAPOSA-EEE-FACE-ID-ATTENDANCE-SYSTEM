@@ -254,45 +254,47 @@ export default function StudentsPage() {
         {loading ? (
           <div className="flex justify-center py-12"><Spinner size={24} color="brand" /></div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {['Name', 'Matric No.', 'Level', 'Option/Course', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">No students found</td></tr>
-              )}
-              {paginated.map(s => (
-                <tr key={s.matric} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900">{s.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">{s.matric}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{s.level}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{getCourseFromMatric(s.matric)}</td>
-                  <td className="px-4 py-3"><Badge status="active" /></td>
-                  <td className="px-4 py-3">
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => openAttendance(s)} title="View & correct attendance"
-                        style={{ padding: '0.3rem 0.55rem', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)' }}>
-                        <ClipboardList size={12} /> Attendance
-                      </button>
-                      <button onClick={() => setConfirmDelete(s)} title="Delete student"
-                        style={{ padding: '0.3rem 0.5rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}>
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="w-full text-sm" style={{ minWidth: 540 }}>
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['Name', 'Matric No.', 'Level', 'Course', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginated.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-10 text-gray-400">No students found</td></tr>
+                )}
+                {paginated.map(s => (
+                  <tr key={s.matric} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-gray-900">{s.name}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">{s.matric}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{s.level}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{getCourseFromMatric(s.matric)}</td>
+                    <td className="px-4 py-3"><Badge status="active" /></td>
+                    <td className="px-4 py-3">
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openAttendance(s)} title="View & correct attendance"
+                          style={{ padding: '0.3rem 0.55rem', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)' }}>
+                          <ClipboardList size={12} /> Attendance
+                        </button>
+                        <button onClick={() => setConfirmDelete(s)} title="Delete student"
+                          style={{ padding: '0.3rem 0.5rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {/* Pagination */}

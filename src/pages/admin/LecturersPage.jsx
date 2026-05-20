@@ -375,68 +375,68 @@ export default function LecturersPage() {
         ) : displayList.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No {activeTab} lecturers yet.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {['Lecturer','Assigned Courses','Status','Actions',''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {displayList.map(l => (
-                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold flex-shrink-0">
-                        {initials(l.name)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm">{l.name}</p>
-                        <p className="text-xs text-gray-400">{l.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {courseBadges(l.courses)}
-                  </td>
-                  <td className="px-4 py-3"><Badge status={l.status}/></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Manage Courses */}
-                      <button onClick={()=>setCourseModal(l)}
-                        style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(47,160,132,0.35)', background:'rgba(47,160,132,0.06)', color:'#2FA084', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}
-                        onMouseEnter={e=>e.currentTarget.style.background='rgba(47,160,132,0.12)'}
-                        onMouseLeave={e=>e.currentTarget.style.background='rgba(47,160,132,0.06)'}>
-                        <BookOpen size={11}/> Courses
-                      </button>
-                      {/* Approve/Reject if pending */}
-                      {l.status === 'pending' && (
-                        <>
-                          <button onClick={()=>handleApprove(l.id)} disabled={approving===l.id}
-                            style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(34,197,94,0.35)', background:'rgba(34,197,94,0.06)', color:'#16a34a', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                            {approving===l.id ? <Spinner size={11} color="brand"/> : <CheckCircle size={11}/>} Approve
-                          </button>
-                          <button onClick={()=>handleReject(l.id)}
-                            style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.05)', color:'#dc2626', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                            <XCircle size={11}/> Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={()=>setConfirmDelete(l)} title="Delete lecturer"
-                      style={{ padding:'0.3rem 0.5rem', borderRadius:8, border:'1px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.05)', color:'#dc2626', cursor:'pointer', display:'flex', alignItems:'center', transition:'all 0.15s' }}
-                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.5)' }}
-                      onMouseLeave={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.05)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}>
-                      <Trash2 size={13}/>
-                    </button>
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="w-full text-sm" style={{ minWidth: 520 }}>
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['Lecturer','Courses','Status','Actions',''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {displayList.map(l => (
+                  <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold flex-shrink-0">
+                          {initials(l.name)}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p className="font-semibold text-gray-900 text-sm" style={{ whiteSpace: 'nowrap' }}>{l.name}</p>
+                          <p className="text-xs text-gray-400" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{l.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {courseBadges(l.courses)}
+                    </td>
+                    <td className="px-4 py-3"><Badge status={l.status}/></td>
+                    <td className="px-4 py-3">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                        <button onClick={()=>setCourseModal(l)}
+                          style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(47,160,132,0.35)', background:'rgba(47,160,132,0.06)', color:'#2FA084', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s', whiteSpace:'nowrap' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='rgba(47,160,132,0.12)'}
+                          onMouseLeave={e=>e.currentTarget.style.background='rgba(47,160,132,0.06)'}>
+                          <BookOpen size={11}/> Courses
+                        </button>
+                        {l.status === 'pending' && (
+                          <>
+                            <button onClick={()=>handleApprove(l.id)} disabled={approving===l.id}
+                              style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(34,197,94,0.35)', background:'rgba(34,197,94,0.06)', color:'#16a34a', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                              {approving===l.id ? <Spinner size={11} color="brand"/> : <CheckCircle size={11}/>} Approve
+                            </button>
+                            <button onClick={()=>handleReject(l.id)}
+                              style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.65rem', borderRadius:8, border:'1px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.05)', color:'#dc2626', fontSize:'0.72rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                              <XCircle size={11}/> Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={()=>setConfirmDelete(l)} title="Delete lecturer"
+                        style={{ padding:'0.3rem 0.5rem', borderRadius:8, border:'1px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.05)', color:'#dc2626', cursor:'pointer', display:'flex', alignItems:'center', transition:'all 0.15s' }}
+                        onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.5)' }}
+                        onMouseLeave={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.05)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}>
+                        <Trash2 size={13}/>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

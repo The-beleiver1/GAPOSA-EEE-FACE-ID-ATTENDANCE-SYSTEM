@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
-  Menu, Bell,
+  Menu, Bell, Moon, Sun,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/services/authService'
 import { useToast } from '@/components/ui/Toast'
 import { getInitials } from '@/utils'
 import { supabase } from '@/lib/supabase'
+import { useTheme } from '@/contexts/ThemeContext'
 import logo from '@/assets/gaposa-logo.png'
 
 const NAV = [
@@ -23,6 +24,7 @@ export function AdminLayout({ children }) {
   const { profile, logout } = useAuthStore()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { dark, toggle: toggleTheme } = useTheme()
   const [open, setOpen]             = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
 
@@ -136,12 +138,20 @@ export function AdminLayout({ children }) {
               <p style={{ margin: 0, color: 'rgba(255,255,255,0.32)', fontSize: '0.6rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email}</p>
             </div>
           </div>
-          <button onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', width: '100%', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.38)'; e.currentTarget.style.background = 'transparent' }}>
-            <LogOut size={14} style={{ flexShrink: 0 }} /> Logout
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleLogout}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.38)'; e.currentTarget.style.background = 'transparent' }}>
+              <LogOut size={14} style={{ flexShrink: 0 }} /> Logout
+            </button>
+            <button onClick={toggleTheme} title={dark ? 'Switch to light' : 'Switch to dark'}
+              style={{ padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}>
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -154,12 +164,14 @@ export function AdminLayout({ children }) {
             <Menu size={18} />
           </button>
           <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>EEE FACE-ID Admin</span>
-          {pendingCount > 0 && (
-            <span style={{ marginLeft: 'auto', minWidth: 20, height: 20, borderRadius: 99, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 800, color: '#fff', padding: '0 4px' }}>
-              {pendingCount > 9 ? '9+' : pendingCount}
-            </span>
-          )}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>EEE FACE-ID</span>
+            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.85rem', lineHeight: 1 }}>|</span>
+            <span style={{ color: '#6FCF97', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.05em' }}>ADMIN</span>
+          </span>
+          <button onClick={toggleTheme} style={{ marginLeft: 'auto', padding: 7, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
         </header>
         <main className="main-content">
           <div style={{ maxWidth: 940, margin: '0 auto' }}>

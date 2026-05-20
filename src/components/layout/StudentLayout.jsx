@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Activity, CalendarX2, Fingerprint, LogOut, Menu, Bell, UserCircle, KeyRound, Mail, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Activity, CalendarX2, Fingerprint, LogOut, Menu, Bell, UserCircle, KeyRound, Mail, ChevronDown, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
+import { useTheme } from '@/contexts/ThemeContext'
 import { getAttendanceSummary, getMyAbsenceRequests, getMyReenrollRequests } from '@/services/studentService'
 import { getInitials } from '@/utils'
 import logo from '@/assets/gaposa-logo.png'
@@ -24,6 +25,7 @@ export function StudentLayout({ children }) {
   const { profile }  = useAuthStore()
   const navigate     = useNavigate()
   const location     = useLocation()
+  const { dark, toggle: toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
 
   const isProfileRoute = location.pathname.startsWith('/student/profile')
@@ -199,12 +201,20 @@ export function StudentLayout({ children }) {
               <p style={{ margin: 0, color: 'rgba(255,255,255,0.32)', fontSize: '0.6rem', fontWeight: 500 }}>{matric || 'Student'}</p>
             </div>
           </div>
-          <button onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', width: '100%', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.38)'; e.currentTarget.style.background = 'transparent' }}>
-            <LogOut size={14} style={{ flexShrink: 0 }} /> Sign Out
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleLogout}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', fontSize: '0.83rem', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.38)'; e.currentTarget.style.background = 'transparent' }}>
+              <LogOut size={14} style={{ flexShrink: 0 }} /> Sign Out
+            </button>
+            <button onClick={toggleTheme} title={dark ? 'Light mode' : 'Dark mode'}
+              style={{ padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}>
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -217,7 +227,14 @@ export function StudentLayout({ children }) {
             <Menu size={18} />
           </button>
           <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>EEE FACE-ID</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>EEE FACE-ID</span>
+            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.85rem', lineHeight: 1 }}>|</span>
+            <span style={{ color: '#6FCF97', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.05em' }}>STUDENT</span>
+          </span>
+          <button onClick={toggleTheme} style={{ marginLeft: 'auto', padding: 7, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
         </header>
         <main className="main-content">
           <div style={{ maxWidth: 940, margin: '0 auto' }}>
