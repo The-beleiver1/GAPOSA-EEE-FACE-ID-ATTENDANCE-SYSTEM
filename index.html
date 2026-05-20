@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=640, initial-scale=1.0" />
+    <script>
+      (function () {
+        // screen.width is CSS px on iOS, physical px on Android
+        var sw  = screen.width;
+        var dpr = window.devicePixelRatio || 1;
+        // If sw looks like physical pixels (> 600), convert to CSS px
+        var cssW = sw < 600 ? sw : Math.round(sw / dpr);
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (cssW >= 768) {
+          // Tablet / large screen — render at natural device width
+          meta.content = 'width=device-width,initial-scale=1.0';
+        } else {
+          // Phone — render at 640 virtual px then scale to fit screen (compact look)
+          var s = (cssW / 640).toFixed(3);
+          meta.content = 'width=640,initial-scale=' + s + ',maximum-scale=' + s + ',user-scalable=no';
+        }
+      })();
+    </script>
     <meta name="theme-color" content="#1F6F5F" />
     <meta name="description" content="GAPOSA EEE Face Recognition Attendance System" />
     <meta name="mobile-web-app-capable" content="yes" />
