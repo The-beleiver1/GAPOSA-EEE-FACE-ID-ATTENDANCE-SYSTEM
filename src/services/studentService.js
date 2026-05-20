@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { supabase } from '@/lib/supabase'
 
-const FACE_SERVER = import.meta.env.VITE_FACE_SERVER_URL || 'http://localhost:8000'
+const FACE_SERVER = 'https://beleiver1-gaposa-face-server.hf.space'
 const DEV = import.meta.env.DEV
 
 // ── Save ArcFace embeddings after enrollment ──────────────────────

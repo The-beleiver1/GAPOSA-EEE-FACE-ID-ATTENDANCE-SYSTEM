@@ -3,7 +3,7 @@
 // Embeddings: Python ArcFace server (512D, 99.4% accuracy, SSD detector)
 // Matching:   Supabase pgvector RPC via React
 
-const FACE_SERVER = import.meta.env.VITE_FACE_SERVER_URL || 'http://localhost:8000'
+const FACE_SERVER = 'https://beleiver1-gaposa-face-server.hf.space'
 
 let modelsLoaded = false
 const MODEL_URL  = '/models'
