@@ -27,12 +27,15 @@ export async function loadFaceModels() {
 }
 
 // ── Check if Python server is online ─────────────────────────────
+// no-cors bypasses CORS preflight; opaque response means we can't read body
+// but a non-thrown fetch means the server is reachable
 export async function checkFaceServer() {
   try {
-    const res = await fetch(`${FACE_SERVER}/health`, {
-      signal: AbortSignal.timeout(3000)
+    await fetch(`${FACE_SERVER}/health`, {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(8000),
     })
-    return res.ok
+    return true
   } catch {
     return false
   }
