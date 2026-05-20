@@ -53,7 +53,7 @@ export function AdminLayout({ children }) {
     <div className="layout-root" style={{ display: 'flex', overflow: 'hidden', background: '#EEEEEE', fontFamily: "'Geologica', sans-serif" }}>
 
       {/* ── Sidebar ── */}
-      <aside className={`fixed lg:relative inset-y-0 left-0 z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      <aside className={`sidebar-aside fixed lg:relative inset-y-0 left-0 z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ width: 236, flexShrink: 0, background: '#1F6F5F', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Sidebar Header */}

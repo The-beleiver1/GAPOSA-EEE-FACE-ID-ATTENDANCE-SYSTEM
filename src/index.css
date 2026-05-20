@@ -112,6 +112,11 @@ html.dark .input-field {
 /* Use dynamic viewport height to avoid mobile browser chrome cutting off sidebar footer */
 .layout-root { height: 100vh; height: 100dvh; }
 
+/* Push sidebar content above the mobile bottom nav bar */
+@media (max-width: 1023px) {
+  .sidebar-aside { padding-bottom: 4.5rem; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
