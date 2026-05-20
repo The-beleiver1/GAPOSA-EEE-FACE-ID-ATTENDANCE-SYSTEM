@@ -226,6 +226,46 @@ export function StudentLayout({ children }) {
         </main>
       </div>
 
+      {/* ── Mobile bottom nav ── */}
+      <nav className="flex lg:hidden" style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: '#1F6F5F', borderTop: '1px solid rgba(255,255,255,0.12)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
+        {[
+          { to: '/student',               label: 'Overview',      Icon: LayoutDashboard, end: true  },
+          { to: '/student/attendance',    label: 'Attendance',    Icon: Activity,        end: false },
+          { to: '/student/absence',       label: 'Absence',       Icon: CalendarX2,      end: false },
+          { to: '/student/notifications', label: 'Alerts',        Icon: Bell,            end: false },
+          { to: '/student/profile',       label: 'Profile',       Icon: UserCircle,      end: false },
+        ].map(({ to, label, Icon, end }) => (
+          <NavLink key={to} to={to} end={end}
+            style={({ isActive }) => ({
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', padding: '0.55rem 0 0.5rem',
+              textDecoration: 'none', gap: '0.2rem',
+              color: isActive ? '#6FCF97' : 'rgba(255,255,255,0.5)',
+              borderTop: isActive ? '2px solid #6FCF97' : '2px solid transparent',
+              fontSize: '0.58rem', fontWeight: isActive ? 700 : 500,
+              transition: 'color 0.15s',
+            })}>
+            {({ isActive }) => (
+              <>
+                <div style={{ position: 'relative' }}>
+                  <Icon size={19} strokeWidth={isActive ? 2.2 : 1.7} />
+                  {to === '/student/notifications' && notifCount > 0 && (
+                    <span style={{ position: 'absolute', top: -4, right: -6, minWidth: 14, height: 14, borderRadius: 99, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', fontWeight: 800, color: '#fff', padding: '0 3px' }}>
+                      {notifCount > 9 ? '9+' : notifCount}
+                    </span>
+                  )}
+                </div>
+                <span>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; font-family: 'Geologica', system-ui, sans-serif; }

@@ -205,18 +205,28 @@ export default function StudentDashboard() {
           </div>
 
           {/* ── Hero card ── */}
-          <div style={{ background: 'linear-gradient(135deg, #1F6F5F 0%, #2FA084 100%)', borderRadius: 24, overflow: 'hidden', boxShadow: '0 8px 32px rgba(31,111,95,0.28)' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1F6F5F 0%, #2FA084 100%)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 32px rgba(31,111,95,0.28)' }}>
             <div style={{ height: 4, background: 'linear-gradient(90deg, rgba(111,207,151,0.5), rgba(255,255,255,0.35), rgba(111,207,151,0.5))' }} />
-            <div style={{ padding: '1.75rem 2rem 1.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+            <div style={{ padding: 'clamp(1rem, 4vw, 1.75rem) clamp(1rem, 4vw, 2rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
               <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                 <AnimatedGreeting greetingText={`${greeting()},`} nameText={firstName.toUpperCase()} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.76rem', letterSpacing: '0.06em', fontFamily: 'inherit' }}>{matric}</span>
-                  {student?.level && <span style={{ background: 'rgba(111,207,151,0.22)', color: '#6FCF97', fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.62rem', borderRadius: 99, border: '1px solid rgba(111,207,151,0.45)' }}>{student.level}</span>}
-                  {student?.option && <span style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.62rem', borderRadius: 99, border: '1px solid rgba(255,255,255,0.22)' }}>{student.option}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.72rem', letterSpacing: '0.06em', fontFamily: 'inherit' }}>{matric}</span>
+                  {student?.level && <span style={{ background: 'rgba(111,207,151,0.22)', color: '#6FCF97', fontSize: '0.65rem', fontWeight: 700, padding: '0.12rem 0.55rem', borderRadius: 99, border: '1px solid rgba(111,207,151,0.45)' }}>{student.level}</span>}
+                  {student?.option && <span style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', fontSize: '0.65rem', fontWeight: 600, padding: '0.12rem 0.55rem', borderRadius: 99, border: '1px solid rgba(255,255,255,0.22)' }}>{student.option}</span>}
                 </div>
               </div>
-              <CircularGauge pct={overallPct} color={pctColor} />
+              <svg width={124} height={124} viewBox="0 0 124 124"
+                style={{ display: 'block', flexShrink: 0, width: 'clamp(86px, 22vw, 124px)', height: 'clamp(86px, 22vw, 124px)' }}>
+                {(() => { const R=46,C=2*Math.PI*R,dash=(Math.min(overallPct,100)/100)*C; return (<>
+                  <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10}/>
+                  <circle cx={62} cy={62} r={R} fill="none" stroke={pctColor} strokeWidth={10}
+                    strokeDasharray={`${dash} ${C}`} strokeLinecap="round" transform="rotate(-90 62 62)"
+                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${pctColor}88)`}}/>
+                  <text x={62} y={57} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={26} fontWeight={900} fontFamily="inherit">{overallPct}%</text>
+                  <text x={62} y={76} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.45)" fontSize={8} fontWeight={600} fontFamily="inherit" letterSpacing="2">ATTENDANCE</text>
+                </>)})()}
+              </svg>
             </div>
           </div>
 

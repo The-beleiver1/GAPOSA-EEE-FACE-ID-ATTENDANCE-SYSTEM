@@ -98,9 +98,9 @@
   overflow-y: auto;
   padding: 1.5rem 1.75rem;
 }
-@media (max-width: 640px) {
+@media (max-width: 1024px) {
   .main-content {
-    padding: 1rem 0.9rem;
+    padding: 1rem 0.9rem 5.5rem;
   }
 }
 
