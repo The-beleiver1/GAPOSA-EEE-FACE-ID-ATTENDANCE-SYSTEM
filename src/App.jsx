@@ -86,17 +86,24 @@ function RequireStudent({ children }) {
   return children
 }
 
+function PageSpinner() {
+  return (
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7fffe' }}>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #e0f4f1', borderTopColor: '#07A996', animation: 'spin 0.7s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 // ── Splash screen steps ───────────────────────────────────────────────
 const STEPS = [
-  { pct: 12,  msg: 'Connecting to database…' },
-  { pct: 28,  msg: 'Establishing secure connection…' },
-  { pct: 44,  msg: 'Loading face detection model…' },
-  { pct: 60,  msg: 'Preparing recognition engine…' },
-  { pct: 73,  msg: 'Checking authentication…' },
-  { pct: 85,  msg: 'Verifying session…' },
-  { pct: 93,  msg: 'Loading student data…' },
-  { pct: 98,  msg: 'Almost ready…' },
+  { pct: 20,  msg: 'Connecting to database…' },
+  { pct: 45,  msg: 'Establishing secure connection…' },
+  { pct: 70,  msg: 'Checking authentication…' },
+  { pct: 88,  msg: 'Verifying session…' },
+  { pct: 97,  msg: 'Almost ready…' },
 ]
+const SPLASH_MS = 1800
 
 export default function App() {
   useAuth()
@@ -112,7 +119,7 @@ export default function App() {
       setProgress(STEPS[i].pct)
       setMessage(STEPS[i].msg)
       i++
-    }, 5500 / STEPS.length)
+    }, SPLASH_MS / STEPS.length)
 
     const done = setTimeout(() => {
       clearInterval(iv)
@@ -120,12 +127,31 @@ export default function App() {
       setMessage('Ready!')
       setTimeout(() => {
         setFading(true)
-        setTimeout(() => { setFading(false); setShowApp(true) }, 700)
-      }, 400)
-    }, 5500)
+        setTimeout(() => { setFading(false); setShowApp(true) }, 500)
+      }, 200)
+    }, SPLASH_MS)
 
     return () => { clearInterval(iv); clearTimeout(done) }
   }, [])
+
+  // Prefetch all page chunks once app is visible so navigation feels instant
+  useEffect(() => {
+    if (!showApp) return
+    const chunks = [
+      () => import('@/pages/auth/LandingPage'),
+      () => import('@/pages/auth/StudentAuth'),
+      () => import('@/pages/auth/LecturerAuth'),
+      () => import('@/pages/auth/AdminAuth'),
+      () => import('@/pages/student/StudentDashboard'),
+      () => import('@/pages/student/StudentAttendance'),
+      () => import('@/pages/student/EnrollFlow'),
+      () => import('@/pages/lecturer/ScanPage'),
+      () => import('@/pages/lecturer/AttendancePage'),
+      () => import('@/pages/admin/AdminDashboard'),
+      () => import('@/pages/admin/StudentsPage'),
+    ]
+    chunks.forEach(fn => fn().catch(() => {}))
+  }, [showApp])
 
   return (
     <ToastProvider>
@@ -135,7 +161,7 @@ export default function App() {
         </div>
       )}
       {showApp && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<PageSpinner />}>
           <Routes>
             {/* Public */}
             <Route path="/"                         element={<LandingPage />} />
