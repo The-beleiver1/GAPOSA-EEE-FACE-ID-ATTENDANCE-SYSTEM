@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Clock, Download, Settings, CheckCircle } from 'lucide-react'
+import { Save, Clock, Download, Settings } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
@@ -185,31 +185,6 @@ export default function SettingsPage() {
               {exporting ? <Spinner size={14} /> : <Download size={14} />}
               {exporting ? 'Generating…' : 'Download CSV'}
             </button>
-          </div>
-        </div>
-
-        {/* System Info */}
-        <div style={CARD}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem', paddingBottom: '0.9rem', borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CheckCircle size={15} color="#10b981" />
-            </div>
-            <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>System Status</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {[
-              { label: 'Active Session',  value: settings.session  || '—' },
-              { label: 'Semester',        value: settings.semester || '—' },
-              { label: 'Semester Weeks',  value: `${settings.total_weeks || settings.totalWeeks || 15} weeks` },
-              { label: 'Face Server',     value: 'Python ArcFace (localhost:8000)' },
-              { label: 'Email Provider',  value: 'Brevo (300 emails/day)' },
-              { label: 'Database',        value: 'Supabase PostgreSQL' },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid #f8fafc' }}>
-                <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>{label}</span>
-                <span style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700 }}>{value}</span>
-              </div>
-            ))}
           </div>
         </div>
 

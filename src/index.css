@@ -109,6 +109,9 @@ html.dark .input-field {
   color: #f0f6fc !important;
 }
 
+/* Use dynamic viewport height to avoid mobile browser chrome cutting off sidebar footer */
+.layout-root { height: 100vh; height: 100dvh; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

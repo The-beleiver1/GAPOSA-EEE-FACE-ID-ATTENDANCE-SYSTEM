@@ -10,12 +10,12 @@ import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { LEVELS } from '@/utils'
 
-function getCourseFromMatric(matric) {
+function getCourseShort(matric) {
   if (!matric) return '—'
   const m = String(matric).toUpperCase()
-  if (m.includes('240137')) return 'Power & Machine (HND)'
-  if (m.includes('240136')) return 'Electronics & Telecom (HND)'
-  if (m.includes('240106')) return 'EEE Technology (ND)'
+  if (m.includes('240137')) return 'Power & Mach.'
+  if (m.includes('240136')) return 'Elec. & Tel.'
+  if (m.includes('240106')) return 'EEE Tech.'
   return '—'
 }
 
@@ -254,47 +254,49 @@ export default function StudentsPage() {
         {loading ? (
           <div className="flex justify-center py-12"><Spinner size={24} color="brand" /></div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="w-full text-sm" style={{ minWidth: 540 }}>
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  {['Name', 'Matric No.', 'Level', 'Course', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-10 text-gray-400">No students found</td></tr>
-                )}
-                {paginated.map(s => (
-                  <tr key={s.matric} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-gray-900">{s.name}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">{s.matric}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{s.level}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{getCourseFromMatric(s.matric)}</td>
-                    <td className="px-4 py-3"><Badge status="active" /></td>
-                    <td className="px-4 py-3">
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => openAttendance(s)} title="View & correct attendance"
-                          style={{ padding: '0.3rem 0.55rem', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)' }}>
-                          <ClipboardList size={12} /> Attendance
-                        </button>
-                        <button onClick={() => setConfirmDelete(s)} title="Delete student"
-                          style={{ padding: '0.3rem 0.5rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}>
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '0.7rem' }}>
+            <colgroup>
+              <col style={{ width: '24%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '9%'  }} />
+              <col style={{ width: '21%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
+            </colgroup>
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                {['Name', 'Matric', 'Lvl', 'Course', 'Status', 'Action'].map(h => (
+                  <th key={h} style={{ padding: '0.5rem 0.4rem', textAlign: 'left', fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', overflow: 'hidden' }}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#9ca3af', fontSize: '0.8rem' }}>No students found</td></tr>
+              )}
+              {paginated.map(s => (
+                <tr key={s.matric} style={{ borderBottom: '1px solid #f9fafb' }}>
+                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: '#1e293b' }}>{s.name}</td>
+                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.62rem', color: '#6b7280' }}>{s.matric}</td>
+                  <td style={{ padding: '0.45rem 0.4rem', color: '#6b7280' }}>{s.level}</td>
+                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#374151' }}>{getCourseShort(s.matric)}</td>
+                  <td style={{ padding: '0.45rem 0.4rem' }}><Badge status="active" /></td>
+                  <td style={{ padding: '0.45rem 0.4rem' }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button onClick={() => openAttendance(s)} title="Attendance"
+                        style={{ padding: '0.28rem 0.38rem', borderRadius: 7, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <ClipboardList size={12} />
+                      </button>
+                      <button onClick={() => setConfirmDelete(s)} title="Delete"
+                        style={{ padding: '0.28rem 0.38rem', borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
 
         {/* Pagination */}

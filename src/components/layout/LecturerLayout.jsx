@@ -29,7 +29,7 @@ export function LecturerLayout({ children }) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#EEEEEE', fontFamily: "'Geologica', sans-serif" }}>
+    <div className="layout-root" style={{ display: 'flex', overflow: 'hidden', background: '#EEEEEE', fontFamily: "'Geologica', sans-serif" }}>
 
       {/* ── Sidebar ── */}
       <aside className={`fixed lg:relative inset-y-0 left-0 z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
@@ -81,7 +81,7 @@ export function LecturerLayout({ children }) {
         </nav>
 
         {/* User + Logout */}
-        <div style={{ padding: '0.9rem 1.35rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '0.9rem 1.35rem', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', marginBottom: '0.5rem' }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(111,207,151,0.18)', border: '1.5px solid rgba(111,207,151,0.40)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#6FCF97', flexShrink: 0 }}>
               {getInitials(profile?.name || 'L')}
