@@ -370,8 +370,8 @@ export default function LecturerReportsPage() {
                                     <td style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem', color: '#6b7280', fontFamily: 'monospace' }}>{r.matric}</td>
                                     <td style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e293b' }}>{r.student_name || '—'}</td>
                                     <td style={{ padding: '0.45rem 0.85rem' }}>
-                                      <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.18rem 0.6rem', borderRadius: 99, background: (r.status === 'present' || r.present) ? '#dcfce7' : r.status === 'late' ? '#fef9c3' : '#fee2e2', color: (r.status === 'present' || r.present) ? '#16a34a' : r.status === 'late' ? '#d97706' : '#dc2626' }}>
-                                        {r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : (r.present ? 'Present' : 'Absent')}
+                                      <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.18rem 0.6rem', borderRadius: 99, background: (r.status === 'present' || r.present) ? '#dcfce7' : '#fee2e2', color: (r.status === 'present' || r.present) ? '#16a34a' : '#dc2626' }}>
+                                        {(r.status === 'present' || r.present) ? 'Present' : 'Absent'}
                                       </span>
                                     </td>
                                   </tr>

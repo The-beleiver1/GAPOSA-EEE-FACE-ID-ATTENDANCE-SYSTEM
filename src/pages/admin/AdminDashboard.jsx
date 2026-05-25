@@ -34,8 +34,7 @@ export default function AdminDashboard() {
 
   const stats = useMemo(() => {
     const present = filtered.filter(r => r.status === 'present' || r.present === true).length
-    const late    = filtered.filter(r => r.status === 'late').length
-    const absent  = filtered.length - present - late
+    const absent  = filtered.length - present
 
     // Per-student attendance rate
     const perStudent = {}
@@ -55,11 +54,9 @@ export default function AdminDashboard() {
     const pieData = total > 0 ? [
       { name: 'Present', value: Math.round(present / total * 100), color: '#22c55e' },
       { name: 'Absent',  value: Math.round(absent  / total * 100), color: '#ef4444' },
-      { name: 'Late',    value: Math.round(late     / total * 100), color: '#f59e0b' },
     ] : [
       { name: 'Present', value: 0, color: '#22c55e' },
       { name: 'Absent',  value: 0, color: '#ef4444' },
-      { name: 'Late',    value: 0, color: '#f59e0b' },
     ]
     const avgPct = total > 0 ? Math.round(present / total * 100) : 0
 
@@ -73,7 +70,7 @@ export default function AdminDashboard() {
     })
     const weeklyData = Object.values(weekMap).sort((a, b) => parseInt(a.week.slice(1)) - parseInt(b.week.slice(1)))
 
-    return { present, late, absent, below75, scansThisWeek, pieData, avgPct, weeklyData }
+    return { present, absent, below75, scansThisWeek, pieData, avgPct, weeklyData }
   }, [filtered])
 
   const levelCounts = ['ND I', 'ND II', 'HND I', 'HND II'].map(lvl => ({

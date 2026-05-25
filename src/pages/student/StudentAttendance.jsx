@@ -36,13 +36,12 @@ function groupByCourse(records, courseMap = {}) {
         label: info ? `${info.code}${info.title ? ' — ' + info.title : ''}` : cid,
         code:  info?.code  || cid,
         title: info?.title || '',
-        records: [], total: 0, present: 0, absent: 0, late: 0,
+        records: [], total: 0, present: 0, absent: 0,
       }
     }
     map[cid].records.push(rec)
     map[cid].total++
     if (rec.status === 'present' || rec.present) map[cid].present++
-    else if (rec.status === 'late') map[cid].late++
     else map[cid].absent++
   }
   return Object.values(map).map(c => ({
@@ -123,7 +122,7 @@ async function buildPrintCourse(course, studentName, matric, student) {
   const logoDataUrl = await getLogoDataUrl()
   const rows = course.records.map(r => `<tr>
     <td>${r.date||'—'}</td><td>Week ${r.week||'—'}</td><td>${r.semester||'—'}</td>
-    <td style="color:${r.status==='present'?'#166534':r.status==='late'?'#92400e':'#991b1b'};font-weight:700">
+    <td style="color:${r.status==='present'?'#166534':'#991b1b'};font-weight:700">
       ${r.status?.charAt(0).toUpperCase()+r.status?.slice(1)||'—'}</td></tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Attendance – ${course.code}</title>
   <style>
@@ -153,8 +152,6 @@ async function buildPrintCourse(course, studentName, matric, student) {
     <div class="stat"><p class="stat-val" style="color:#16a34a">${course.present}</p><p class="stat-lbl">Present</p></div>
     <div class="divider"></div>
     <div class="stat"><p class="stat-val" style="color:#dc2626">${course.absent}</p><p class="stat-lbl">Absent</p></div>
-    <div class="divider"></div>
-    <div class="stat"><p class="stat-val" style="color:#d97706">${course.late}</p><p class="stat-lbl">Late</p></div>
     <div class="divider"></div>
     <div class="stat"><p class="stat-val" style="color:${course.pct>=75?'#16a34a':course.pct>=50?'#d97706':'#dc2626'}">${course.pct}%</p><p class="stat-lbl">Attendance</p></div>
     <div class="divider"></div>
@@ -369,11 +366,10 @@ export default function StudentAttendance() {
                     : <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> At Risk</span>}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.75rem', marginBottom: '0.25rem' }}>
                   {[
                     { label: 'Present', val: course.present, color: '#16a34a', bg: '#f0fdf4' },
                     { label: 'Absent',  val: course.absent,  color: '#dc2626', bg: '#fff1f2' },
-                    { label: 'Late',    val: course.late,    color: '#d97706', bg: '#fffbeb' },
                   ].map(({ label, val, color, bg }) => (
                     <div key={label} style={{ textAlign: 'center', background: bg, borderRadius: 12, padding: '0.75rem 0.5rem' }}>
                       <p style={{ color, fontSize: '1.6rem', fontWeight: 900, margin: 0, fontFamily: "'Albert Sans',sans-serif", lineHeight: 1 }}>{val}</p>
@@ -401,8 +397,8 @@ export default function StudentAttendance() {
                           <td style={TD}>
                             <span style={{
                               fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.65rem', borderRadius: 99,
-                              background: rec.status==='present'?'#dcfce7':rec.status==='late'?'#fef9c3':'#fee2e2',
-                              color:      rec.status==='present'?'#16a34a':rec.status==='late'?'#d97706':'#dc2626',
+                              background: rec.status==='present'?'#dcfce7':'#fee2e2',
+                              color:      rec.status==='present'?'#16a34a':'#dc2626',
                             }}>
                               {rec.status?.charAt(0).toUpperCase()+rec.status?.slice(1)||'—'}
                             </span>

@@ -215,12 +215,11 @@ export default function SettingsPage() {
         const code = r.course_code || 'Unknown'
         if (!courseStats[code]) courseStats[code] = { code, title: r.course_title || '', students: {} }
         if (!courseStats[code].students[r.matric]) {
-          courseStats[code].students[r.matric] = { matric: r.matric, name: r.student_name || '', level: r.level || '', present: 0, absent: 0, late: 0, total: 0 }
+          courseStats[code].students[r.matric] = { matric: r.matric, name: r.student_name || '', level: r.level || '', present: 0, absent: 0, total: 0 }
         }
         const st = courseStats[code].students[r.matric]
         st.total++
         if (r.status === 'present') st.present++
-        else if (r.status === 'late') st.late++
         else st.absent++
       })
       // Merge accurate names & levels from archive's students array
@@ -278,10 +277,10 @@ export default function SettingsPage() {
         return `<div class="course-section">
           <div class="section-header">${c.code}${c.title ? ' — ' + c.title : ''}</div>
           <table>
-            <thead><tr><th>#</th><th>Matric No.</th><th>Student Name</th><th>Level</th><th>Present</th><th>Absent</th><th>Late</th><th>Total</th><th>Rate</th></tr></thead>
+            <thead><tr><th>#</th><th>Matric No.</th><th>Student Name</th><th>Level</th><th>Present</th><th>Absent</th><th>Total</th><th>Rate</th></tr></thead>
             <tbody>
-              ${rows.map((r, i) => { const rate = r.total > 0 ? Math.round(r.present / r.total * 100) : 0; return `<tr><td>${i+1}</td><td>${r.matric}</td><td>${r.name}</td><td>${r.level || '—'}</td><td class="present">${r.present}</td><td class="absent">${r.absent}</td><td>${r.late}</td><td>${r.total}</td><td class="${rateClass(rate)}">${rate}%</td></tr>` }).join('')}
-              <tr class="total-row"><td colspan="4" style="text-align:right">Course Average</td><td class="present">${totP}</td><td class="absent">${totT - totP}</td><td>—</td><td>${totT}</td><td class="${rateClass(avg)}">${avg}%</td></tr>
+              ${rows.map((r, i) => { const rate = r.total > 0 ? Math.round(r.present / r.total * 100) : 0; return `<tr><td>${i+1}</td><td>${r.matric}</td><td>${r.name}</td><td>${r.level || '—'}</td><td class="present">${r.present}</td><td class="absent">${r.absent}</td><td>${r.total}</td><td class="${rateClass(rate)}">${rate}%</td></tr>` }).join('')}
+              <tr class="total-row"><td colspan="4" style="text-align:right">Course Average</td><td class="present">${totP}</td><td class="absent">${totT - totP}</td><td>${totT}</td><td class="${rateClass(avg)}">${avg}%</td></tr>
             </tbody>
           </table></div>`
       }).join('')

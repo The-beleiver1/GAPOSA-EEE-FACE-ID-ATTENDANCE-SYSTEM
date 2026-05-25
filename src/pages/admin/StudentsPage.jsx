@@ -19,11 +19,10 @@ function getCourseShort(matric) {
   return '—'
 }
 
-const STATUS_OPTIONS = ['present', 'absent', 'late']
+const STATUS_OPTIONS = ['present', 'absent']
 const STATUS_STYLES = {
   present: { bg: '#dcfce7', color: '#166534' },
   absent:  { bg: '#fee2e2', color: '#991b1b' },
-  late:    { bg: '#fef9c3', color: '#92400e' },
 }
 
 export default function StudentsPage() {
@@ -207,8 +206,7 @@ export default function StudentsPage() {
               <div style={{ padding: '0.75rem 1.4rem', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', gap: '1.25rem', flexShrink: 0 }}>
                 {[
                   { label: 'Present', val: attRecords.filter(r => (r.status || (r.present ? 'present' : 'absent')) === 'present').length, color: '#16a34a' },
-                  { label: 'Absent',  val: attRecords.filter(r => (r.status || (r.present ? 'present' : 'absent')) === 'absent').length,  color: '#dc2626' },
-                  { label: 'Late',    val: attRecords.filter(r => r.status === 'late').length,                                              color: '#d97706' },
+                  { label: 'Absent',  val: attRecords.filter(r => (r.status || (r.present ? 'present' : 'absent')) !== 'present').length,  color: '#dc2626' },
                 ].map(({ label, val, color }) => (
                   <span key={label} style={{ fontSize: '0.78rem', fontWeight: 700, color }}>
                     {label}: {val}
