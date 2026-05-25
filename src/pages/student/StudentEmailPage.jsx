@@ -41,7 +41,7 @@ export default function StudentEmailPage() {
       const otp = await saveAndSendOTP(matric, emailInput.trim())
       await sendStudentOTP(emailInput.trim(), name, otp)
       setStep('otp_sent'); startCountdown(60)
-    } catch { setError('Failed to send code. Check the email address and try again.'); setStep('idle') }
+    } catch (err) { console.error('[StudentEmail] sendCode failed:', err); setError(err?.message || 'Failed to send code. Check the email address and try again.'); setStep('idle') }
   }
 
   async function handleVerify(e) {

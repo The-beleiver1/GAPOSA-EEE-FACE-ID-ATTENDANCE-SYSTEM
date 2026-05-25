@@ -443,6 +443,13 @@ export async function getStudentEmail(matric) {
 }
 
 export async function saveAndSendOTP(matric, email) {
+  // Refresh JWT so RLS can read matric from user_metadata
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  if (!refreshData?.session) {
+    // Re-bind matric in case the anonymous session lost its metadata
+    await supabase.auth.updateUser({ data: { matric: String(matric) } })
+  }
+
   // Rate-limit: one OTP per 60 seconds. Infer creation time from expires_at (expires_at = created + 10min)
   const { data: existing } = await supabase
     .from('student_email_otps')
