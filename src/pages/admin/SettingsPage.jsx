@@ -26,16 +26,29 @@ export default function SettingsPage() {
   const [clearConfirm,   setClearConfirm]   = useState('')
   const [archives,       setArchives]       = useState([])
   const [selArchiveId,   setSelArchiveId]   = useState('')
-  const [redownloading,  setRedownloading]  = useState(false)
-  const [pdfLoading,     setPdfLoading]     = useState(false)
-  const [deletingArchive,setDeletingArchive]= useState(false)
-  const [deleteConfirmId,setDeleteConfirmId]= useState(null)
+  const [redownloading,    setRedownloading]    = useState(false)
+  const [pdfLoading,       setPdfLoading]       = useState(false)
+  const [deletingArchive,  setDeletingArchive]  = useState(false)
+  const [deleteConfirmId,  setDeleteConfirmId]  = useState(null)
+  const [selArchiveData,   setSelArchiveData]   = useState(null)
+  const [selArchiveLoading,setSelArchiveLoading]= useState(false)
+  const [pdfLevel,         setPdfLevel]         = useState('all')
+  const [pdfCourse,        setPdfCourse]        = useState('all')
   const { toast } = useToast()
 
   useEffect(() => {
     Promise.all([getSettings(), getCourses(), getSessionArchives()])
       .then(([s, c, a]) => { setSettings(s); setCourses(c); setArchives(a) })
   }, [])
+
+  useEffect(() => {
+    if (!selArchiveId) { setSelArchiveData(null); setPdfLevel('all'); setPdfCourse('all'); return }
+    setSelArchiveLoading(true); setPdfLevel('all'); setPdfCourse('all')
+    getSessionArchiveData(selArchiveId)
+      .then(setSelArchiveData)
+      .catch(() => {})
+      .finally(() => setSelArchiveLoading(false))
+  }, [selArchiveId])
 
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }))
 
@@ -186,11 +199,10 @@ export default function SettingsPage() {
   }
 
   async function handleDownloadPDF() {
-    if (!selArchiveId) return
+    if (!selArchiveData) return
     setPdfLoading(true)
     try {
-      const archive = await getSessionArchiveData(selArchiveId)
-      const d = archive.data
+      const d = selArchiveData.data
       const LEVEL_ORDER = ['ND I', 'ND II', 'HND I', 'HND II']
       const rateClass = r => r >= 75 ? 'rate-good' : r >= 50 ? 'rate-warn' : 'rate-bad'
 
@@ -216,15 +228,29 @@ export default function SettingsPage() {
         })
       })
 
+      // Apply level filter — remove students not matching selected level
+      if (pdfLevel !== 'all') {
+        Object.values(courseStats).forEach(c => {
+          Object.keys(c.students).forEach(matric => {
+            if (c.students[matric].level !== pdfLevel) delete c.students[matric]
+          })
+        })
+      }
+
+      // Apply course filter — only keep selected course
+      const visibleCourses = pdfCourse === 'all'
+        ? Object.values(courseStats)
+        : Object.values(courseStats).filter(c => c.code === pdfCourse)
+
       const sortStudents = rows => [...rows].sort((a, b) => {
         const li = LEVEL_ORDER.indexOf(a.level); const lj = LEVEL_ORDER.indexOf(b.level)
         if (li !== lj) return (li < 0 ? 99 : li) - (lj < 0 ? 99 : lj)
         return (a.name || '').localeCompare(b.name || '')
       })
 
-      const courseHTML = Object.values(courseStats).map(c => {
+      const courseHTML = visibleCourses.map(c => {
         const rows = sortStudents(Object.values(c.students))
-        if (!rows.length) return `<div class="course-section"><div class="section-header">${c.code}${c.title ? ' — ' + c.title : ''}</div><p class="empty-msg">No attendance records for this course.</p></div>`
+        if (!rows.length) return `<div class="course-section"><div class="section-header">${c.code}${c.title ? ' — ' + c.title : ''}</div><p class="empty-msg">No attendance records for this filter combination.</p></div>`
         const totP = rows.reduce((s, r) => s + r.present, 0)
         const totT = rows.reduce((s, r) => s + r.total, 0)
         const avg  = totT > 0 ? Math.round(totP / totT * 100) : 0
@@ -239,11 +265,17 @@ export default function SettingsPage() {
           </table></div>`
       }).join('')
 
-      const studentRows = sortStudents(d.students || [])
+      const allStudents = (d.students || []).filter(s => pdfLevel === 'all' || s.level === pdfLevel)
+      const studentRows = sortStudents(allStudents)
       const levelCounts = LEVEL_ORDER.map(lvl => ({ lvl, count: studentRows.filter(s => s.level === lvl).length })).filter(x => x.count > 0)
 
+      const filterLabel = [
+        pdfLevel !== 'all' ? pdfLevel : 'All Levels',
+        pdfCourse !== 'all' ? pdfCourse : 'All Courses',
+      ].join(' · ')
+
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Attendance Report — ${d.session} ${d.semester}</title>
+<title>Attendance Report — ${d.session} ${d.semester} — ${filterLabel}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;font-size:11px}
@@ -292,7 +324,7 @@ tr:nth-child(even) td{background:#f9fbff}
 </div>
 
 <div class="report-title">Attendance Report</div>
-<div class="report-sub">${d.session || ''} · ${d.semester || ''}</div>
+<div class="report-sub">${d.session || ''} · ${d.semester || ''} · ${filterLabel}</div>
 
 <div class="stats-row">
   <div class="stat-box"><div class="val">${d.total_students || 0}</div><div class="lbl">Students Enrolled</div></div>
@@ -521,8 +553,9 @@ ${courseHTML}
                 No saved sessions yet. Download a backup to save one here.
               </p>
             ) : (<>
+              {/* Step 1 — Academic Session & Semester */}
               <div>
-                <label style={LBL}>Select a session</label>
+                <label style={LBL}>Academic Session &amp; Semester</label>
                 <select
                   style={INP}
                   value={selArchiveId}
@@ -536,6 +569,7 @@ ${courseHTML}
                 </select>
               </div>
 
+              {/* Session info box */}
               {selArchiveId && (() => {
                 const a = archives.find(x => x.id === selArchiveId)
                 if (!a) return null
@@ -548,27 +582,47 @@ ${courseHTML}
                       </span>
                     </div>
                     <div style={{ display:'flex', gap:'1.25rem' }}>
-                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}>
-                        <strong style={{ color:'#374151' }}>{a.total_students}</strong> students
-                      </span>
-                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}>
-                        <strong style={{ color:'#374151' }}>{a.total_attendance}</strong> attendance records
-                      </span>
+                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}><strong style={{ color:'#374151' }}>{a.total_students}</strong> students</span>
+                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}><strong style={{ color:'#374151' }}>{a.total_attendance}</strong> attendance records</span>
                     </div>
                   </div>
                 )
               })()}
 
+              {/* Step 2 — Level & Course filters (shown once archive data is loaded) */}
+              {selArchiveLoading && (
+                <div style={{ display:'flex', justifyContent:'center', padding:'0.5rem 0' }}><Spinner size={16} color="brand"/></div>
+              )}
+              {selArchiveData && !selArchiveLoading && (
+                <div style={{ display:'flex', gap:'0.6rem', flexWrap:'wrap' }}>
+                  <div style={{ flex:'1 1 130px' }}>
+                    <label style={LBL}>Level</label>
+                    <select style={INP} value={pdfLevel} onChange={e => setPdfLevel(e.target.value)}>
+                      <option value="all">All Levels</option>
+                      {['ND I','ND II','HND I','HND II'].map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex:'1 1 130px' }}>
+                    <label style={LBL}>Course</label>
+                    <select style={INP} value={pdfCourse} onChange={e => setPdfCourse(e.target.value)}>
+                      <option value="all">All Courses</option>
+                      {(selArchiveData.data?.courses || []).map(c => (
+                        <option key={c.code} value={c.code}>{c.code}{c.title ? ` — ${c.title}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 — Action buttons */}
               {selArchiveId && (
                 <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                  {/* PDF button — full width */}
-                  <button onClick={handleDownloadPDF} disabled={pdfLoading}
-                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, width:'100%', padding:'0.75rem', borderRadius:10, border:'none', background:pdfLoading?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:pdfLoading?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  <button onClick={handleDownloadPDF} disabled={pdfLoading || !selArchiveData || selArchiveLoading}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, width:'100%', padding:'0.75rem', borderRadius:10, border:'none', background:(pdfLoading||!selArchiveData||selArchiveLoading)?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:(pdfLoading||!selArchiveData||selArchiveLoading)?'not-allowed':'pointer', fontFamily:'inherit' }}>
                     {pdfLoading ? <Spinner size={14}/> : <FileText size={14}/>}
                     {pdfLoading ? 'Building report…' : 'Download PDF Report'}
                   </button>
 
-                  {/* JSON + Delete row */}
                   <div style={{ display:'flex', gap:'0.5rem' }}>
                     <button onClick={handleRedownload} disabled={redownloading}
                       style={{ flex:'1 1 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.65rem 0.9rem', borderRadius:10, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#374151', fontWeight:600, fontSize:'0.8rem', cursor:redownloading?'not-allowed':'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
