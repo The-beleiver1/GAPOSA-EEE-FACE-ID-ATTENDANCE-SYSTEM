@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Save, Clock, Download, Settings, Archive, Trash2, AlertTriangle } from 'lucide-react'
+import { Save, Clock, Download, Settings, Archive, Trash2, AlertTriangle, History, FileJson } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { getSettings, updateSettings, getCourses } from '@/services/courseService'
-import { getAllAttendanceWithDetails, getEnrolledStudents, getAllAbsenceRequests, clearSessionData } from '@/services/studentService'
+import { getAllAttendanceWithDetails, getEnrolledStudents, getAllAbsenceRequests, clearSessionData, saveSessionArchive, getSessionArchives, getSessionArchiveData, deleteSessionArchive } from '@/services/studentService'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import { SEMESTERS } from '@/utils'
@@ -24,11 +24,16 @@ export default function SettingsPage() {
   const [showClearModal, setShowClearModal] = useState(false)
   const [clearing,       setClearing]       = useState(false)
   const [clearConfirm,   setClearConfirm]   = useState('')
+  const [archives,       setArchives]       = useState([])
+  const [selArchiveId,   setSelArchiveId]   = useState('')
+  const [redownloading,  setRedownloading]  = useState(false)
+  const [deletingArchive,setDeletingArchive]= useState(false)
+  const [deleteConfirmId,setDeleteConfirmId]= useState(null)
   const { toast } = useToast()
 
   useEffect(() => {
-    Promise.all([getSettings(), getCourses()])
-      .then(([s, c]) => { setSettings(s); setCourses(c) })
+    Promise.all([getSettings(), getCourses(), getSessionArchives()])
+      .then(([s, c, a]) => { setSettings(s); setCourses(c); setArchives(a) })
   }, [])
 
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }))
@@ -145,10 +150,52 @@ export default function SettingsPage() {
       a.download = `EEE-FACEID_${(settings.session || 'Session').replace('/', '-')}_${settings.semester?.replace(/\s/g,'-') || 'Sem'}_${new Date().toISOString().slice(0,10)}.json`
       a.click()
       URL.revokeObjectURL(url)
-      toast('Session backup downloaded successfully', 'success')
+
+      // Also save to cloud (non-blocking — local download already succeeded)
+      try {
+        await saveSessionArchive(backup)
+        const updated = await getSessionArchives()
+        setArchives(updated)
+        toast('Session backup downloaded & saved to cloud', 'success')
+      } catch {
+        toast('Session backup downloaded (cloud save failed — check DB setup)', 'success')
+      }
     } catch (err) {
       toast('Backup failed: ' + err.message, 'error')
     } finally { setArchiving(false) }
+  }
+
+  async function handleRedownload() {
+    if (!selArchiveId) return
+    setRedownloading(true)
+    try {
+      const archive = await getSessionArchiveData(selArchiveId)
+      const json = JSON.stringify(archive.data, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `EEE-FACEID_${(archive.session || 'Session').replace('/', '-')}_${(archive.semester || 'Sem').replace(/\s/g,'-')}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast('Archive downloaded', 'success')
+    } catch (err) {
+      toast('Download failed: ' + err.message, 'error')
+    } finally { setRedownloading(false) }
+  }
+
+  async function handleDeleteArchive() {
+    if (!deleteConfirmId) return
+    setDeletingArchive(true)
+    try {
+      await deleteSessionArchive(deleteConfirmId)
+      setArchives(prev => prev.filter(a => a.id !== deleteConfirmId))
+      if (selArchiveId === deleteConfirmId) setSelArchiveId('')
+      setDeleteConfirmId(null)
+      toast('Archive deleted', 'success')
+    } catch (err) {
+      toast('Delete failed: ' + err.message, 'error')
+    } finally { setDeletingArchive(false) }
   }
 
   async function handleClearSession() {
@@ -316,6 +363,84 @@ export default function SettingsPage() {
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'0.78rem', borderRadius:11, border:'none', background:archiving?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.88rem', cursor:archiving?'not-allowed':'pointer', fontFamily:'inherit', boxShadow:'0 2px 10px rgba(31,111,95,0.25)', transition:'all 0.2s' }}>
               {archiving ? <><span style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.4)', borderTopColor:'#fff', borderRadius:'50%', display:'inline-block', animation:'spin 0.7s linear infinite' }}/> Building backup…</> : <><Archive size={14}/> Download Session Backup</>}
             </button>
+          </div>
+        </div>
+
+        {/* Previous Sessions */}
+        <div style={CARD}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:'1.25rem', paddingBottom:'0.9rem', borderBottom:'1px solid #f1f5f9' }}>
+            <div style={{ width:32, height:32, borderRadius:9, background:'rgba(99,102,241,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <History size={15} color="#6366f1" />
+            </div>
+            <h3 style={{ margin:0, fontSize:'0.88rem', fontWeight:800, color:'#1e293b' }}>Previous Sessions</h3>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:'0.85rem' }}>
+            {archives.length === 0 ? (
+              <p style={{ margin:0, fontSize:'0.8rem', color:'#94a3b8', textAlign:'center', padding:'1.5rem 0' }}>
+                No saved sessions yet. Download a backup to save one here.
+              </p>
+            ) : (<>
+              <div>
+                <label style={LBL}>Select a session</label>
+                <select
+                  style={INP}
+                  value={selArchiveId}
+                  onChange={e => { setSelArchiveId(e.target.value); setDeleteConfirmId(null) }}>
+                  <option value="">Choose a session…</option>
+                  {archives.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.session} · {a.semester}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selArchiveId && (() => {
+                const a = archives.find(x => x.id === selArchiveId)
+                if (!a) return null
+                return (
+                  <div style={{ background:'#f8fafc', borderRadius:10, padding:'0.85rem 1rem', border:'1px solid #e2e8f0' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:'0.5rem', marginBottom:'0.4rem' }}>
+                      <span style={{ fontSize:'0.82rem', fontWeight:700, color:'#374151' }}>{a.session} · {a.semester}</span>
+                      <span style={{ fontSize:'0.72rem', color:'#94a3b8' }}>
+                        {new Date(a.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                      </span>
+                    </div>
+                    <div style={{ display:'flex', gap:'1.25rem' }}>
+                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}>
+                        <strong style={{ color:'#374151' }}>{a.total_students}</strong> students
+                      </span>
+                      <span style={{ fontSize:'0.78rem', color:'#6b7280' }}>
+                        <strong style={{ color:'#374151' }}>{a.total_attendance}</strong> attendance records
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {selArchiveId && (
+                <div style={{ display:'flex', gap:'0.6rem', flexWrap:'wrap' }}>
+                  <button onClick={handleRedownload} disabled={redownloading}
+                    style={{ flex:'1 1 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.7rem 0.9rem', borderRadius:10, border:'none', background:redownloading?'#94a3b8':'linear-gradient(135deg,#6366f1,#4f46e5)', color:'#fff', fontWeight:700, fontSize:'0.82rem', cursor:redownloading?'not-allowed':'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                    {redownloading ? <Spinner size={13}/> : <FileJson size={13}/>}
+                    {redownloading ? 'Downloading…' : 'Download JSON'}
+                  </button>
+
+                  {deleteConfirmId === selArchiveId ? (
+                    <button onClick={handleDeleteArchive} disabled={deletingArchive}
+                      style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.7rem 0.9rem', borderRadius:10, border:'none', background:'#dc2626', color:'#fff', fontWeight:700, fontSize:'0.82rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      {deletingArchive ? <Spinner size={13}/> : <Trash2 size={13}/>}
+                      {deletingArchive ? 'Deleting…' : 'Confirm Delete'}
+                    </button>
+                  ) : (
+                    <button onClick={() => setDeleteConfirmId(selArchiveId)}
+                      style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.7rem 0.9rem', borderRadius:10, border:'1px solid rgba(239,68,68,0.35)', background:'rgba(239,68,68,0.05)', color:'#dc2626', fontWeight:600, fontSize:'0.82rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      <Trash2 size={13}/> Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </>)}
           </div>
         </div>
 

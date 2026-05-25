@@ -572,6 +572,41 @@ export async function clearMasterList() {
 
 // ── Session backup & reset ────────────────────────────────────────
 
+export async function saveSessionArchive(archiveObj) {
+  const { error } = await supabase.from('session_archives').insert([{
+    session:          archiveObj.session,
+    semester:         archiveObj.semester,
+    total_students:   archiveObj.total_students,
+    total_attendance: archiveObj.total_attendance,
+    data:             archiveObj,
+  }])
+  if (error) throw new Error(error.message)
+}
+
+export async function getSessionArchives() {
+  const { data, error } = await supabase
+    .from('session_archives')
+    .select('id, session, semester, total_students, total_attendance, created_at')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data || []
+}
+
+export async function getSessionArchiveData(id) {
+  const { data, error } = await supabase
+    .from('session_archives')
+    .select('id, session, semester, data')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function deleteSessionArchive(id) {
+  const { error } = await supabase.from('session_archives').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 export async function getAllAbsenceRequests() {
   const { data, error } = await supabase
     .from('absence_requests')
