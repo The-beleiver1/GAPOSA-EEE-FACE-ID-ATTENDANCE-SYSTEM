@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Layers, Plus, Trash2, X, Check } from 'lucide-react'
+import { Layers, Plus, Trash2, X, Check, Search } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { getCourses, createCourse, deleteCourse } from '@/services/courseService'
@@ -14,6 +14,7 @@ export default function CoursesPage() {
   const [saving,        setSaving]        = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting,      setDeleting]      = useState(false)
+  const [search,        setSearch]        = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
@@ -91,6 +92,22 @@ export default function CoursesPage() {
         </button>
       </div>
 
+      {/* Search */}
+      <div style={{ position:'relative', marginBottom:'0.85rem' }}>
+        <Search size={14} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'#94a3b8', pointerEvents:'none' }}/>
+        <input
+          value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search by code or title…"
+          style={{ width:'100%', padding:'0.68rem 0.9rem 0.68rem 2.25rem', borderRadius:12, border:'1.5px solid #e2e8f0', fontSize:'0.85rem', color:'#1e293b', outline:'none', fontFamily:'inherit', background:'#fff', boxSizing:'border-box', transition:'border-color 0.2s' }}
+          onFocus={e=>e.target.style.borderColor='#2FA084'}
+          onBlur={e=>e.target.style.borderColor='#e2e8f0'}/>
+        {search && (
+          <button onClick={()=>setSearch('')} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#94a3b8', display:'flex', padding:2 }}>
+            <X size={13}/>
+          </button>
+        )}
+      </div>
+
       {/* Add form */}
       {adding && (
         <div style={{ background:'#fff', border:'1px solid #f1f5f9', borderRadius:18, boxShadow:'0 2px 12px rgba(31,111,95,0.07)', padding:'1.25rem 1.5rem', marginBottom:'1rem' }}>
@@ -128,6 +145,10 @@ export default function CoursesPage() {
           <p style={{ textAlign:'center', color:'#94a3b8', fontSize:'0.85rem', padding:'3rem 1.5rem' }}>No courses yet. Add the first one above.</p>
         ) : (
           <div style={{ overflowX:'auto' }}>
+            {(() => {
+              const q = search.trim().toLowerCase()
+              const visible = q ? courses.filter(c => c.code.toLowerCase().includes(q) || (c.title||'').toLowerCase().includes(q)) : courses
+              return (<>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'#f8fafc', borderBottom:'1px solid #f1f5f9' }}>
@@ -137,7 +158,9 @@ export default function CoursesPage() {
                 </tr>
               </thead>
               <tbody>
-                {courses.map((c, i) => (
+                {visible.length === 0 ? (
+                  <tr><td colSpan={4} style={{ padding:'2rem', textAlign:'center', color:'#94a3b8', fontSize:'0.85rem' }}>No courses match "{search}"</td></tr>
+                ) : visible.map((c, i) => (
                   <tr key={c.id} style={{ borderBottom:'1px solid #f8fafc' }}
                     onMouseEnter={e=>e.currentTarget.style.background='#fafafa'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
@@ -163,8 +186,11 @@ export default function CoursesPage() {
               </tbody>
             </table>
             <div style={{ padding:'0.65rem 1.25rem', borderTop:'1px solid #f8fafc', background:'#fafafa' }}>
-              <p style={{ margin:0, fontSize:'0.72rem', color:'#94a3b8' }}>{courses.length} course{courses.length!==1?'s':''} total</p>
+              <p style={{ margin:0, fontSize:'0.72rem', color:'#94a3b8' }}>
+                {q && visible.length !== courses.length ? `${visible.length} of ${courses.length} courses` : `${courses.length} course${courses.length!==1?'s':''} total`}
+              </p>
             </div>
+            </>)})()}
           </div>
         )}
       </div>
