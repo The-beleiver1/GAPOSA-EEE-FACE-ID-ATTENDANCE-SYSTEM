@@ -4,7 +4,7 @@ import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { getSettings, updateSettings, getCourses } from '@/services/courseService'
-import { getAllAttendanceWithDetails, getEnrolledStudents, getAllAbsenceRequests, clearSessionData, saveSessionArchive, getSessionArchives, getSessionArchiveData, deleteSessionArchive } from '@/services/studentService'
+import { getAllAttendanceWithDetails, getEnrolledStudents, getAllAbsenceRequests, clearSessionData, saveSessionArchive, getSessionArchives, getSessionArchiveData, deleteSessionArchive, getMasterList } from '@/services/studentService'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import { SEMESTERS } from '@/utils'
@@ -144,8 +144,10 @@ export default function SettingsPage() {
           option: s.option, email: s.email, email_verified: s.email_verified,
         })),
         attendance: records.map(r => ({
-          matric:      r.matric,
-          student_name: studentMap[r.matric]?.name || r.student_name || '',
+          matric:       r.matric,
+          student_name: studentMap[r.matric]?.name || r.name || r.student_name || '',
+          level:        studentMap[r.matric]?.level  || '',
+          option:       studentMap[r.matric]?.option || '',
           course_code:  courseMap[r.course_id]?.code  || '',
           course_title: courseMap[r.course_id]?.title || '',
           date:         r.date,
@@ -213,7 +215,7 @@ export default function SettingsPage() {
         const code = r.course_code || 'Unknown'
         if (!courseStats[code]) courseStats[code] = { code, title: r.course_title || '', students: {} }
         if (!courseStats[code].students[r.matric]) {
-          courseStats[code].students[r.matric] = { matric: r.matric, name: r.student_name || '', level: '', present: 0, absent: 0, late: 0, total: 0 }
+          courseStats[code].students[r.matric] = { matric: r.matric, name: r.student_name || '', level: r.level || '', present: 0, absent: 0, late: 0, total: 0 }
         }
         const st = courseStats[code].students[r.matric]
         st.total++
@@ -221,12 +223,31 @@ export default function SettingsPage() {
         else if (r.status === 'late') st.late++
         else st.absent++
       })
-      // Merge accurate names & levels from students array
+      // Merge accurate names & levels from archive's students array
       ;(d.students || []).forEach(s => {
         Object.values(courseStats).forEach(c => {
-          if (c.students[s.matric]) { c.students[s.matric].level = s.level || ''; c.students[s.matric].name = s.name || c.students[s.matric].name }
+          if (c.students[s.matric]) {
+            if (s.name)  c.students[s.matric].name  = s.name
+            if (s.level) c.students[s.matric].level = s.level
+          }
         })
       })
+
+      // Fallback: enrich still-blank names/levels from live master_list
+      // (needed when archive was saved with 0 students enrolled)
+      try {
+        const masterList = await getMasterList()
+        const masterMap = {}
+        masterList.forEach(s => { masterMap[String(s.matric).trim()] = s })
+        Object.values(courseStats).forEach(c => {
+          Object.values(c.students).forEach(st => {
+            if (!st.name || !st.level) {
+              const ml = masterMap[String(st.matric).trim()]
+              if (ml) { if (!st.name) st.name = ml.name || ''; if (!st.level) st.level = ml.level || '' }
+            }
+          })
+        })
+      } catch { /* master_list enrichment is best-effort */ }
 
       // Apply level filter — remove students not matching selected level
       if (pdfLevel !== 'all') {
