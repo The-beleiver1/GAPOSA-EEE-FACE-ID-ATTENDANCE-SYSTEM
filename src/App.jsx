@@ -42,6 +42,7 @@ const LecturerProfilePage = lazy(() => import('@/pages/lecturer/LecturerProfileP
 const AdminDashboard      = lazy(() => import('@/pages/admin/AdminDashboard'))
 const StudentsPage        = lazy(() => import('@/pages/admin/StudentsPage'))
 const MasterListPage      = lazy(() => import('@/pages/admin/MasterListPage'))
+const CoursesPage         = lazy(() => import('@/pages/admin/CoursesPage'))
 const LecturersPage       = lazy(() => import('@/pages/admin/LecturersPage'))
 const SettingsPage        = lazy(() => import('@/pages/admin/SettingsPage'))
 const NotificationsPage   = lazy(() => import('@/pages/admin/NotificationsPage'))
@@ -160,6 +161,7 @@ export default function App() {
       () => import('@/pages/admin/AdminDashboard'),
       () => import('@/pages/admin/StudentsPage'),
       () => import('@/pages/admin/MasterListPage'),
+      () => import('@/pages/admin/CoursesPage'),
       () => import('@/pages/admin/LecturersPage'),
       () => import('@/pages/admin/SettingsPage'),
       () => import('@/pages/admin/NotificationsPage'),
@@ -213,6 +215,7 @@ export default function App() {
             <Route path="/admin"                    element={<RequireRole role="admin"><AdminDashboard /></RequireRole>} />
             <Route path="/admin/students"           element={<RequireRole role="admin"><StudentsPage /></RequireRole>} />
             <Route path="/admin/masterlist"         element={<RequireRole role="admin"><MasterListPage /></RequireRole>} />
+            <Route path="/admin/courses"            element={<RequireRole role="admin"><CoursesPage /></RequireRole>} />
             <Route path="/admin/lecturers"          element={<RequireRole role="admin"><LecturersPage /></RequireRole>} />
             <Route path="/admin/settings"           element={<RequireRole role="admin"><SettingsPage /></RequireRole>} />
             <Route path="/admin/notifications"      element={<RequireRole role="admin"><NotificationsPage /></RequireRole>} />

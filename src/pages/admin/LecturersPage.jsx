@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle, XCircle, Copy, Mail, RefreshCw, BookOpen, X, Search, Check, Trash2, GraduationCap } from 'lucide-react'
+import { CheckCircle, XCircle, Copy, Mail, RefreshCw, BookOpen, X, Search, Check, Trash2, GraduationCap, ChevronDown } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
@@ -213,19 +213,31 @@ export default function LecturersPage() {
     finally { setDeleting(false) }
   }
 
-  /* ── Resolve course codes ── */
-  function courseBadges(courseIds) {
+  /* ── Courses dropdown cell ── */
+  function CoursesDropdown({ courseIds }) {
+    const [open, setOpen] = useState(false)
     if (!courseIds?.length) return <span style={{ color:'#94a3b8', fontSize:'0.72rem' }}>—</span>
-    const codes = courseIds.map(id => {
-      const c = allCourses.find(x=>x.id===id)
-      return c?.code || id
-    })
+    const courses = courseIds.map(id => allCourses.find(x=>x.id===id)).filter(Boolean)
+    const count   = courses.length
     return (
-      <div style={{ display:'flex', flexWrap:'wrap', gap:'0.25rem' }}>
-        {codes.slice(0,3).map(code => (
-          <span key={code} style={{ fontSize:'0.65rem', fontWeight:700, padding:'0.14rem 0.48rem', borderRadius:99, background:'rgba(47,160,132,0.1)', color:'#2FA084', border:'1px solid rgba(47,160,132,0.25)' }}>{code}</span>
-        ))}
-        {codes.length > 3 && <span style={{ fontSize:'0.65rem', color:'#94a3b8', fontWeight:600 }}>+{codes.length-3}</span>}
+      <div style={{ position:'relative', display:'inline-block' }}>
+        <button onClick={()=>setOpen(o=>!o)}
+          style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.22rem 0.6rem', borderRadius:99, background:'rgba(47,160,132,0.1)', color:'#2FA084', border:'1px solid rgba(47,160,132,0.25)', cursor:'pointer', fontFamily:'inherit', fontSize:'0.72rem', fontWeight:700 }}>
+          {count} Course{count!==1?'s':''} <ChevronDown size={11} style={{ transition:'transform 0.2s', transform:open?'rotate(180deg)':'none' }}/>
+        </button>
+        {open && (
+          <>
+            <div style={{ position:'fixed', inset:0, zIndex:50 }} onClick={()=>setOpen(false)}/>
+            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, zIndex:100, background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, boxShadow:'0 8px 30px rgba(0,0,0,0.12)', padding:'0.5rem', minWidth:160, display:'flex', flexDirection:'column', gap:'0.25rem' }}>
+              {courses.map(c => (
+                <div key={c.id} style={{ padding:'0.35rem 0.65rem', borderRadius:8, background:'#f8fafc' }}>
+                  <p style={{ margin:0, fontSize:'0.75rem', fontWeight:800, color:'#2FA084' }}>{c.code}</p>
+                  {c.title && <p style={{ margin:'1px 0 0', fontSize:'0.65rem', color:'#94a3b8', lineHeight:1.3 }}>{c.title}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     )
   }
@@ -399,7 +411,7 @@ export default function LecturersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {courseBadges(l.courses)}
+                      <CoursesDropdown courseIds={l.courses}/>
                     </td>
                     <td className="px-4 py-3"><Badge status={l.status}/></td>
                     <td className="px-4 py-3">

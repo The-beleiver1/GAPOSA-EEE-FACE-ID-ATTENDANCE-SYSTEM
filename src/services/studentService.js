@@ -569,3 +569,36 @@ export async function clearMasterList() {
   if (error) throw new Error(error.message)
   return true
 }
+
+// ── Session backup & reset ────────────────────────────────────────
+
+export async function getAllAbsenceRequests() {
+  const { data, error } = await supabase
+    .from('absence_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data || []
+}
+
+export async function clearSessionData() {
+  const tables = [
+    { table: 'student_email_otps', col: 'matric' },
+    { table: 'reenroll_requests',  col: 'matric' },
+    { table: 'absence_requests',   col: 'matric' },
+    { table: 'attendance',         col: 'matric' },
+    { table: 'face_descriptors',   col: 'matric' },
+    { table: 'students',           col: 'matric' },
+  ]
+  for (const { table, col } of tables) {
+    const { error } = await supabase.from(table).delete().not(col, 'is', null)
+    if (error && !error.message.includes('0 rows')) throw new Error(`Failed clearing ${table}: ${error.message}`)
+  }
+  // Clear student photos from storage
+  try {
+    const { data: photos } = await supabase.storage.from('student - photos').list()
+    if (photos?.length) await supabase.storage.from('student - photos').remove(photos.map(f => f.name))
+    const { data: docs } = await supabase.storage.from('absence-docs').list()
+    if (docs?.length) await supabase.storage.from('absence-docs').remove(docs.map(f => f.name))
+  } catch { /* storage cleanup is best-effort */ }
+}

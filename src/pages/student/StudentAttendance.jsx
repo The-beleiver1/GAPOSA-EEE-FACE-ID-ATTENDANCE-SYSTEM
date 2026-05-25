@@ -219,12 +219,17 @@ async function buildPrintAll(courses, studentName, matric, student) {
   </body></html>`
 }
 
-function openPrint(html) {
-  const w = window.open('', '_blank')
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  w.print()
+function openPrint(html, filename = 'attendance-report.html') {
+  const printable = html.replace('</body>', `<script>window.onload=function(){window.print()}<\/script></body>`)
+  const blob = new Blob([printable], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const w    = window.open(url, '_blank')
+  if (!w) {
+    const a = document.createElement('a')
+    a.href = url; a.download = filename
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
 }
 
 export default function StudentAttendance() {

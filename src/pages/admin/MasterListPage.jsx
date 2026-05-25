@@ -78,28 +78,59 @@ export default function MasterListPage() {
     finally { setClearing(false); setShowClear(false) }
   }
 
-  function handlePrint() {
-    const win = window.open('', '_blank')
-    win.document.write(`
-      <html><head><title>Master List — EEE FACE-ID</title>
-      <style>
-        body{font-family:Arial,sans-serif;font-size:12px;padding:20px;}
-        h2{text-align:center;margin-bottom:4px;}
-        p{text-align:center;color:#666;margin-bottom:16px;font-size:11px;}
-        table{width:100%;border-collapse:collapse;}
-        th{background:#1d4ed8;color:white;padding:8px 10px;text-align:left;font-size:11px;}
-        td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;}
-        tr:nth-child(even) td{background:#f9fafb;}
-        .footer{margin-top:16px;text-align:right;font-size:10px;color:#999;}
-      </style></head><body>
-      <h2>EEE FACE-ID — Master Student List</h2>
-      <p>Total: ${filtered.length} students${levelFilter !== 'All' ? ` · Level: ${levelFilter}` : ''} · Printed: ${new Date().toLocaleString()}</p>
-      <table><thead><tr><th>#</th><th>Matric No.</th><th>Full Name</th><th>Level</th><th>Course</th></tr></thead>
+  async function handlePrint() {
+    let logoDataUrl = ''
+    try {
+      const { default: logoSrc } = await import('@/assets/gaposa-logo.png')
+      const res  = await fetch(logoSrc)
+      const blob = await res.blob()
+      logoDataUrl = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob) })
+    } catch { /* skip logo if unavailable */ }
+
+    const printed = new Date().toLocaleString('en-GB', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Master List — EEE FACE-ID</title>
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:Arial,sans-serif;font-size:11px;padding:28px 32px;color:#111}
+      table{width:100%;border-collapse:collapse;margin-top:18px}
+      th{background:#1F6F5F;color:#fff;padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+      td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11px}
+      tr:nth-child(even) td{background:#f9fafb}
+      .meta{margin:12px 0 0;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px}
+      .foot{margin-top:20px;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px}
+      @media print{body{padding:16px 20px}}
+    </style></head><body>
+    <div style="display:flex;align-items:center;gap:18px;padding-bottom:16px;margin-bottom:18px;border-bottom:3px solid #1F6F5F">
+      ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:72px;height:72px;object-fit:contain" alt="Logo"/>` : ''}
+      <div>
+        <h1 style="margin:0;font-size:19px;font-weight:900;color:#1F6F5F;text-transform:uppercase">GATEWAY ICT POLYTECHNIC</h1>
+        <p style="margin:2px 0 0;font-size:10px;color:#6b7280">Saapade, Ogun State, Nigeria</p>
+        <p style="margin:5px 0 0;font-size:11px;font-weight:800;color:#1e3a5f">Department of Electrical / Electronics Engineering</p>
+        <p style="margin:2px 0 0;font-size:10px;color:#2FA084;font-weight:700">EEE FACE-ID Attendance Management System</p>
+      </div>
+    </div>
+    <h2 style="margin:0;font-size:14px;font-weight:900;color:#1e293b">Master Student List</h2>
+    <p class="meta">Total: <strong>${filtered.length} students</strong>${levelFilter !== 'All' ? ` · Level: ${levelFilter}` : ''} · Printed: ${printed}</p>
+    <table>
+      <thead><tr><th>#</th><th>Matric No.</th><th>Full Name</th><th>Level</th><th>Course</th></tr></thead>
       <tbody>${filtered.map((s,i) => `<tr><td>${i+1}</td><td>${s.matric}</td><td>${s.name}</td><td>${s.level}</td><td>${s.course||'—'}</td></tr>`).join('')}</tbody>
-      </table>
-      <div class="footer">EEE FACE-ID Attendance System · EEE Department</div>
-      </body></html>`)
-    win.document.close(); win.focus(); win.print(); win.close()
+    </table>
+    <div class="foot">
+      <span>Gateway ICT Polytechnic, Saapade · Electrical/Electronics Engineering Dept.</span>
+      <span>EEE FACE-ID Attendance System</span>
+    </div>
+    <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url  = URL.createObjectURL(blob)
+    const w    = window.open(url, '_blank')
+    if (!w) {
+      const a = document.createElement('a')
+      a.href = url; a.download = 'master-list.html'
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
   }
 
   const hasFilters = search || levelFilter !== 'All'
