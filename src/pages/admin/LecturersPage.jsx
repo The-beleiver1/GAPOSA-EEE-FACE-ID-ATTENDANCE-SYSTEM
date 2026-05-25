@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, Copy, Mail, RefreshCw, BookOpen, X, Search, Check, Trash2, GraduationCap, ChevronDown } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
@@ -216,27 +216,35 @@ export default function LecturersPage() {
   /* ── Courses dropdown cell ── */
   function CoursesDropdown({ courseIds }) {
     const [open, setOpen] = useState(false)
+    const ref = useRef(null)
+
+    useEffect(() => {
+      if (!open) return
+      function handleOutside(e) {
+        if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+      }
+      document.addEventListener('mousedown', handleOutside)
+      return () => document.removeEventListener('mousedown', handleOutside)
+    }, [open])
+
     if (!courseIds?.length) return <span style={{ color:'#94a3b8', fontSize:'0.72rem' }}>—</span>
     const courses = courseIds.map(id => allCourses.find(x=>x.id===id)).filter(Boolean)
     const count   = courses.length
     return (
-      <div style={{ position:'relative', display:'inline-block' }}>
+      <div ref={ref} style={{ position:'relative', display:'inline-block' }}>
         <button onClick={()=>setOpen(o=>!o)}
           style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.22rem 0.6rem', borderRadius:99, background:'rgba(47,160,132,0.1)', color:'#2FA084', border:'1px solid rgba(47,160,132,0.25)', cursor:'pointer', fontFamily:'inherit', fontSize:'0.72rem', fontWeight:700 }}>
           {count} Course{count!==1?'s':''} <ChevronDown size={11} style={{ transition:'transform 0.2s', transform:open?'rotate(180deg)':'none' }}/>
         </button>
         {open && (
-          <>
-            <div style={{ position:'fixed', inset:0, zIndex:50 }} onClick={()=>setOpen(false)}/>
-            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, zIndex:100, background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, boxShadow:'0 8px 30px rgba(0,0,0,0.12)', padding:'0.5rem', minWidth:160, display:'flex', flexDirection:'column', gap:'0.25rem' }}>
-              {courses.map(c => (
-                <div key={c.id} style={{ padding:'0.35rem 0.65rem', borderRadius:8, background:'#f8fafc' }}>
-                  <p style={{ margin:0, fontSize:'0.75rem', fontWeight:800, color:'#2FA084' }}>{c.code}</p>
-                  {c.title && <p style={{ margin:'1px 0 0', fontSize:'0.65rem', color:'#94a3b8', lineHeight:1.3 }}>{c.title}</p>}
-                </div>
-              ))}
-            </div>
-          </>
+          <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, zIndex:100, background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, boxShadow:'0 8px 30px rgba(0,0,0,0.12)', padding:'0.5rem', minWidth:160, display:'flex', flexDirection:'column', gap:'0.25rem' }}>
+            {courses.map(c => (
+              <div key={c.id} style={{ padding:'0.35rem 0.65rem', borderRadius:8, background:'#f8fafc' }}>
+                <p style={{ margin:0, fontSize:'0.75rem', fontWeight:800, color:'#2FA084' }}>{c.code}</p>
+                {c.title && <p style={{ margin:'1px 0 0', fontSize:'0.65rem', color:'#94a3b8', lineHeight:1.3 }}>{c.title}</p>}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     )
