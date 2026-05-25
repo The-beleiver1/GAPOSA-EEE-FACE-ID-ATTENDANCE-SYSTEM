@@ -274,16 +274,24 @@ export default function SettingsPage() {
         pdfCourse !== 'all' ? pdfCourse : 'All Courses',
       ].join(' · ')
 
+      // Load logo same way as MasterListPage
+      let logoDataUrl = ''
+      try {
+        const { default: logoSrc } = await import('@/assets/gaposa-logo.png')
+        const res  = await fetch(logoSrc)
+        const blob = await res.blob()
+        logoDataUrl = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob) })
+      } catch { /* skip logo if unavailable */ }
+
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Attendance Report — ${d.session} ${d.semester} — ${filterLabel}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;font-size:11px}
 .page{padding:36px 40px;max-width:960px;margin:0 auto}
-.letterhead{display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:3px solid #1F6F5F;margin-bottom:20px}
-.lh-badge{width:50px;height:50px;border-radius:50%;background:#1F6F5F;color:#fff;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.lh-text h1{font-size:15px;font-weight:900;color:#1F6F5F;text-transform:uppercase;letter-spacing:.04em}
-.lh-text p{font-size:10px;color:#555;margin-top:2px}
+.letterhead{display:flex;align-items:center;gap:18px;padding-bottom:16px;border-bottom:3px solid #1F6F5F;margin-bottom:20px}
+.lh-text h1{margin:0;font-size:19px;font-weight:900;color:#1F6F5F;text-transform:uppercase}
+.lh-text p{margin:2px 0 0;font-size:10px;color:#6b7280}
 .lh-right{margin-left:auto;text-align:right;font-size:10px;color:#6b7280;line-height:1.6}
 .report-title{font-size:19px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .report-sub{font-size:11px;color:#64748b;margin-bottom:16px}
@@ -310,11 +318,12 @@ tr:nth-child(even) td{background:#f9fbff}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.course-section{page-break-inside:avoid}}
 </style></head><body><div class="page">
 <div class="letterhead">
-  <div class="lh-badge">G</div>
+  ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:72px;height:72px;object-fit:contain" alt="Logo"/>` : ''}
   <div class="lh-text">
-    <h1>Gateway ICT Polytechnic</h1>
-    <p>Electrical / Electronics Engineering Department</p>
-    <p>Face-ID Attendance System — Official Attendance Report</p>
+    <h1>GATEWAY ICT POLYTECHNIC</h1>
+    <p>Saapade, Ogun State, Nigeria</p>
+    <p style="margin-top:5px;font-size:11px;font-weight:800;color:#1e3a5f">Department of Electrical / Electronics Engineering</p>
+    <p style="font-size:10px;color:#2FA084;font-weight:700">EEE FACE-ID Attendance Management System</p>
   </div>
   <div class="lh-right">
     <div><strong>${d.session || ''}</strong> Academic Session</div>
@@ -500,12 +509,6 @@ ${courseHTML}
                 {courses.map(c => <option key={c.id} value={c.id}>{c.code} — {c.title}</option>)}
               </select>
             </div>
-            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e2e8f0' }}>
-              <p style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', fontWeight: 700, color: '#374151' }}>CSV includes:</p>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.6 }}>
-                Matric · Student Name · Level · Option · Course Code · Course Title · Date · Week · Semester · Status
-              </p>
-            </div>
             <button onClick={handleExportCSV} disabled={exporting}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '0.78rem', borderRadius: 11, border: 'none', background: exporting ? '#94a3b8' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 10px rgba(99,102,241,0.25)', transition: 'all 0.2s' }}>
               {exporting ? <Spinner size={14} /> : <Download size={14} />}
@@ -523,14 +526,8 @@ ${courseHTML}
             <h3 style={{ margin:0, fontSize:'0.88rem', fontWeight:800, color:'#1e293b' }}>Session Backup</h3>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'0.85rem' }}>
-            <div style={{ background:'#f8fafc', borderRadius:10, padding:'0.85rem 1rem', border:'1px solid #e2e8f0' }}>
-              <p style={{ margin:'0 0 0.3rem', fontSize:'0.8rem', fontWeight:700, color:'#374151' }}>Backup includes:</p>
-              <p style={{ margin:0, fontSize:'0.75rem', color:'#6b7280', lineHeight:1.6 }}>
-                All students · Face enrollment status · Full attendance history · Absence requests · Course list
-              </p>
-            </div>
-            <p style={{ margin:0, fontSize:'0.72rem', color:'#94a3b8', lineHeight:1.55 }}>
-              Download a complete JSON backup of this session's data before clearing. Keep it safely — you can open it in Excel or any text editor if a dispute arises.
+            <p style={{ margin:0, fontSize:'0.8rem', color:'#64748b', lineHeight:1.55 }}>
+              Downloads a full backup — students, attendance history, face data, and absence requests. Save before clearing session data.
             </p>
             <button onClick={handleArchive} disabled={archiving}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'0.78rem', borderRadius:11, border:'none', background:archiving?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.88rem', cursor:archiving?'not-allowed':'pointer', fontFamily:'inherit', boxShadow:'0 2px 10px rgba(31,111,95,0.25)', transition:'all 0.2s' }}>
@@ -617,28 +614,22 @@ ${courseHTML}
               {/* Step 3 — Action buttons */}
               {selArchiveId && (
                 <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                  <button onClick={handleDownloadPDF} disabled={pdfLoading || !selArchiveData || selArchiveLoading}
-                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, width:'100%', padding:'0.75rem', borderRadius:10, border:'none', background:(pdfLoading||!selArchiveData||selArchiveLoading)?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:(pdfLoading||!selArchiveData||selArchiveLoading)?'not-allowed':'pointer', fontFamily:'inherit' }}>
-                    {pdfLoading ? <Spinner size={14}/> : <FileText size={14}/>}
-                    {pdfLoading ? 'Building report…' : 'Download PDF Report'}
-                  </button>
-
                   <div style={{ display:'flex', gap:'0.5rem' }}>
-                    <button onClick={handleRedownload} disabled={redownloading}
-                      style={{ flex:'1 1 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.65rem 0.9rem', borderRadius:10, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#374151', fontWeight:600, fontSize:'0.8rem', cursor:redownloading?'not-allowed':'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      {redownloading ? <Spinner size={12}/> : <FileJson size={12}/>}
-                      {redownloading ? 'Downloading…' : 'Download JSON'}
+                    <button onClick={handleDownloadPDF} disabled={pdfLoading || !selArchiveData || selArchiveLoading}
+                      style={{ flex:'1 1 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:'0.72rem', borderRadius:10, border:'none', background:(pdfLoading||!selArchiveData||selArchiveLoading)?'#94a3b8':'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.83rem', cursor:(pdfLoading||!selArchiveData||selArchiveLoading)?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                      {pdfLoading ? <Spinner size={13}/> : <FileText size={13}/>}
+                      {pdfLoading ? 'Building…' : 'Download PDF'}
                     </button>
 
                     {deleteConfirmId === selArchiveId ? (
                       <button onClick={handleDeleteArchive} disabled={deletingArchive}
-                        style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.65rem 0.9rem', borderRadius:10, border:'none', background:'#dc2626', color:'#fff', fontWeight:700, fontSize:'0.8rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                        style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.72rem 0.9rem', borderRadius:10, border:'none', background:'#dc2626', color:'#fff', fontWeight:700, fontSize:'0.8rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                         {deletingArchive ? <Spinner size={12}/> : <Trash2 size={12}/>}
                         {deletingArchive ? 'Deleting…' : 'Confirm Delete'}
                       </button>
                     ) : (
-                      <button onClick={() => setDeleteConfirmId(selArchiveId)}
-                        style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.65rem 0.9rem', borderRadius:10, border:'1px solid rgba(239,68,68,0.35)', background:'rgba(239,68,68,0.05)', color:'#dc2626', fontWeight:600, fontSize:'0.8rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      <button onClick={() => setDeleteConfirmId(selArchiveId)} title="Remove this archive from cloud storage"
+                        style={{ flex:'0 0 auto', display:'flex', alignItems:'center', gap:5, padding:'0.72rem 0.9rem', borderRadius:10, border:'1px solid rgba(239,68,68,0.35)', background:'rgba(239,68,68,0.05)', color:'#dc2626', fontWeight:600, fontSize:'0.8rem', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                         <Trash2 size={12}/> Delete
                       </button>
                     )}
@@ -658,14 +649,8 @@ ${courseHTML}
             <h3 style={{ margin:0, fontSize:'0.88rem', fontWeight:800, color:'#1e293b' }}>Clear Session Data</h3>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'0.85rem' }}>
-            <div style={{ background:'rgba(239,68,68,0.04)', borderRadius:10, padding:'0.85rem 1rem', border:'1px solid rgba(239,68,68,0.15)' }}>
-              <p style={{ margin:'0 0 0.3rem', fontSize:'0.8rem', fontWeight:700, color:'#dc2626' }}>This deletes permanently:</p>
-              <p style={{ margin:0, fontSize:'0.75rem', color:'#6b7280', lineHeight:1.6 }}>
-                All students · Face enrollments · Attendance records · Absence requests · Student photos
-              </p>
-            </div>
-            <p style={{ margin:0, fontSize:'0.72rem', color:'#94a3b8', lineHeight:1.55 }}>
-              Use this at the end of a session to reset the system for a new intake. <strong style={{ color:'#dc2626' }}>Always download a backup first.</strong> Courses, lecturers, and admin accounts are not affected.
+            <p style={{ margin:0, fontSize:'0.8rem', color:'#64748b', lineHeight:1.55 }}>
+              Permanently deletes all students, face enrollments, attendance records, and absence requests. <strong style={{ color:'#dc2626' }}>Always backup first.</strong> Courses and lecturers are not affected.
             </p>
             <button onClick={()=>setShowClearModal(true)}
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'0.78rem', borderRadius:11, border:'1.5px solid rgba(239,68,68,0.4)', background:'rgba(239,68,68,0.04)', color:'#dc2626', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', fontFamily:'inherit', transition:'all 0.2s' }}
