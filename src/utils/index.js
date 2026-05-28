@@ -40,6 +40,35 @@ export function parseExcelStudentList(data) {
 
 export const LEVELS = ['ND 1', 'ND 2', 'HND 1', 'HND 2']
 
+// Normalise level strings so "HND II" == "HND 2", "ND I" == "ND 1", etc.
+export function normalizeLevel(level) {
+  if (!level) return ''
+  return level.toString().trim().toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/\bIII\b/g, '3')
+    .replace(/\bII\b/g,  '2')
+    .replace(/\bI\b/g,   '1')
+    .replace(/(\D)2\b/g, '$1 2')   // "HND2" → "HND 2"
+    .replace(/(\D)1\b/g, '$1 1')   // "HND1" → "HND 1"
+    .replace(/  +/g, ' ')
+    .trim()
+}
+
+// Derive the canonical level from a course code prefix.
+// 1x = ND 1, 2x = ND 2, 3x = HND 1, 4x = HND 2
+export function levelFromCourseCode(code) {
+  if (!code) return null
+  const m = code.match(/(\d)/)
+  if (!m) return null
+  switch (m[1]) {
+    case '1': return 'ND 1'
+    case '2': return 'ND 2'
+    case '3': return 'HND 1'
+    case '4': return 'HND 2'
+    default:  return null
+  }
+}
+
 export const SEMESTERS = ['First Semester', 'Second Semester']
 
 export function weekRange(total = 15) {

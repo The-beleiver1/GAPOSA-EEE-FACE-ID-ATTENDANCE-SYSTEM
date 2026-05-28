@@ -10,6 +10,7 @@ import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, dispatchTe
 import { getLecturerCourses, getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/Modal'
+import { normalizeLevel, levelFromCourseCode } from '@/utils'
 /* ── Animated sliding mode toggle ── */
 function ModeToggle({ mode, onChange }) {
   const isMulti = mode === 'multiple'
@@ -215,9 +216,12 @@ export default function ScanPage() {
         return
       }
 
-      // Level / class validation
-      const courseLevel = store.activeCourse?.level
-      if (courseLevel && result.student.level && result.student.level !== courseLevel) {
+      // Level / class validation — derive from course code first (definitive),
+      // fall back to stored course.level; normalise both sides before comparing
+      const courseLevel = levelFromCourseCode(store.activeCourse?.code)
+                       || normalizeLevel(store.activeCourse?.level)
+      if (courseLevel && result.student.level &&
+          normalizeLevel(result.student.level) !== normalizeLevel(courseLevel)) {
         store.setScanning(false)
         setScanStatus('wrong_level')
         setWrongLevelStudent({ result, courseLevel })
@@ -311,7 +315,8 @@ export default function ScanPage() {
   async function handleFinalise() {
     setFinalising(true)
     try {
-      const courseStudents = students.filter(s => s.level === scan.activeCourse?.level)
+      const activeCourseLevel = levelFromCourseCode(scan.activeCourse?.code) || normalizeLevel(scan.activeCourse?.level)
+      const courseStudents = students.filter(s => normalizeLevel(s.level) === normalizeLevel(activeCourseLevel))
       const absent = courseStudents.filter(s => !scan.isAlreadyScanned(s.matric))
       const presentCount = scan.presentList.length
       const course = scan.activeCourse
@@ -699,8 +704,8 @@ export default function ScanPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
                       </svg>
                       <span style={{ fontSize:'0.68rem', color:'#b91c1c', fontWeight:700 }}>
-                        Student is <span style={{ background:'rgba(220,38,38,0.12)', borderRadius:4, padding:'0 4px' }}>{wrongLevelStudent.result.student.level}</span>
-                        {' '}— course is for <span style={{ background:'rgba(47,160,132,0.12)', color:'#1F6F5F', borderRadius:4, padding:'0 4px' }}>{wrongLevelStudent.courseLevel}</span>
+                        Student is <span style={{ background:'rgba(220,38,38,0.12)', borderRadius:4, padding:'0 4px' }}>{normalizeLevel(wrongLevelStudent.result.student.level)}</span>
+                        {' '}— course is for <span style={{ background:'rgba(47,160,132,0.12)', color:'#1F6F5F', borderRadius:4, padding:'0 4px' }}>{normalizeLevel(wrongLevelStudent.courseLevel)}</span>
                       </span>
                     </div>
                     {/* Actions — only in single mode; continuous auto-dismisses */}

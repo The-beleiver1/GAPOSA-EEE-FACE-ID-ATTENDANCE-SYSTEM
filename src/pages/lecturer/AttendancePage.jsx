@@ -5,6 +5,7 @@ import { getLecturerCourses } from '@/services/courseService'
 import { getCourseAttendance, getEnrolledStudents } from '@/services/studentService'
 import { getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
+import { normalizeLevel, levelFromCourseCode } from '@/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Download, Filter, Search, CalendarCheck } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
@@ -38,8 +39,9 @@ export default function AttendancePage() {
   const presentCount = records.filter(r => r.status === 'present').length
   const absentCount  = records.filter(r => r.status === 'absent').length
 
+  const courseLevel = course ? (levelFromCourseCode(course.code) || normalizeLevel(course.level)) : null
   const filteredStudents = students
-    .filter(s => s.level === course?.level)
+    .filter(s => normalizeLevel(s.level) === normalizeLevel(courseLevel))
     .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.matric.toLowerCase().includes(search.toLowerCase()))
 
   function getRecord(matric) {

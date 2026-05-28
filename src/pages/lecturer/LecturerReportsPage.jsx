@@ -5,6 +5,7 @@ import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses, getSettings } from '@/services/courseService'
 import { getCourseAttendance, getEnrolledStudents, notifyStudentWarning } from '@/services/studentService'
+import { normalizeLevel, levelFromCourseCode } from '@/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import logoSrc from '@/assets/gaposa-logo.png'
@@ -188,7 +189,8 @@ export default function LecturerReportsPage() {
 
   const course        = courses.find(c => c.id === selectedCourse)
   const totalWeeks    = settings.total_weeks || settings.totalWeeks || 15
-  const courseStudents = students.filter(s => s.level === course?.level)
+  const effectiveCourseLevel = course ? (levelFromCourseCode(course.code) || normalizeLevel(course.level)) : null
+  const courseStudents = students.filter(s => normalizeLevel(s.level) === normalizeLevel(effectiveCourseLevel))
 
   const weeklyData = Array.from({ length: totalWeeks }, (_, i) => {
     const week = i + 1

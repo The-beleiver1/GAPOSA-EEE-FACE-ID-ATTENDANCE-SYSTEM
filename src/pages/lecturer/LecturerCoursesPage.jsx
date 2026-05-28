@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses } from '@/services/courseService'
 import { getCourseAttendance, getEnrolledStudents } from '@/services/studentService'
 import { Spinner } from '@/components/ui/Spinner'
+import { normalizeLevel, levelFromCourseCode } from '@/utils'
 
 export default function LecturerCoursesPage() {
   const { profile } = useAuthStore()
@@ -23,7 +24,8 @@ export default function LecturerCoursesPage() {
         const statsMap = {}
         await Promise.all(c.map(async course => {
           const records = await getCourseAttendance(course.id)
-          const enrolled = s.filter(st => st.level === course.level).length
+          const cl = levelFromCourseCode(course.code) || normalizeLevel(course.level)
+          const enrolled = s.filter(st => normalizeLevel(st.level) === normalizeLevel(cl)).length
           const presentCount = records.filter(r => r.status === 'present').length
           const totalRecords = records.length
           statsMap[course.id] = { presentCount, totalRecords, enrolled }
@@ -67,7 +69,8 @@ export default function LecturerCoursesPage() {
               const s = stats[course.id] || { presentCount: 0, totalRecords: 0, enrolled: 0 }
               const attendanceRate = s.enrolled > 0 ? Math.round((s.presentCount / Math.max(s.totalRecords, 1)) * 100) : 0
               const isOpen = expanded === course.id
-              const courseStudents = students.filter(st => st.level === course.level)
+              const cl2 = levelFromCourseCode(course.code) || normalizeLevel(course.level)
+              const courseStudents = students.filter(st => normalizeLevel(st.level) === normalizeLevel(cl2))
 
               return (
                 <div key={course.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', overflow: 'hidden', transition: 'box-shadow 0.15s' }}>
