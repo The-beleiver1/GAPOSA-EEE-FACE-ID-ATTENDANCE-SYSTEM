@@ -6,7 +6,7 @@ import { useScanStore } from '@/store/scanStore'
 import { useCamera } from '@/hooks/useCamera'
 import { useToast } from '@/components/ui/Toast'
 import { captureFrameAsBase64, getEmbeddingsFromServer, checkFaceServer } from '@/services/faceService'
-import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, getStudentsWithVerifiedEmail, queueAttendanceNotifications, dispatchTelegramNotifications } from '@/services/studentService'
+import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, dispatchTelegramNotifications, getScannedWeeks } from '@/services/studentService'
 import { getLecturerCourses, getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/Modal'
@@ -88,6 +88,7 @@ export default function ScanPage() {
   const autoTimerRef           = useRef({})
   const alreadyMarkedTimerRef  = useRef(null)
   const wrongLevelTimerRef     = useRef(null)
+  const [scannedWeeks,         setScannedWeeks]    = useState(new Set())
   const [serverOnline,         setServerOnline]    = useState(null)
   const [scanStatus,           setScanStatus]      = useState('idle')
   const [alreadyMarked,        setAlreadyMarked]   = useState(null)
@@ -100,6 +101,19 @@ export default function ScanPage() {
     return () => { clearInterval(scanIntervalRef.current); stopCamera() }
   }, [])
 
+  useEffect(() => {
+    const courseId = scan.activeCourse?.id
+    if (!courseId || !scan.semester || !scan.session) return
+    getScannedWeeks(courseId, scan.semester, scan.session).then(ws => {
+      const wsSet = new Set(ws)
+      setScannedWeeks(wsSet)
+      if (wsSet.has(scan.activeWeek)) {
+        const firstFree = Array.from({ length: totalWeeks }, (_, i) => i + 1).find(w => !wsSet.has(w))
+        if (firstFree) scan.setActiveWeek(firstFree)
+      }
+    })
+  }, [scan.activeCourse?.id, scan.semester, scan.session])
+
   async function init() {
     setLoading(true)
     try {
@@ -109,10 +123,21 @@ export default function ScanPage() {
         getSettings(),
       ])
       setCourses(c); setStudents(s); setSettings(cfg)
-      if (c.length) scan.setActiveCourse(c[0])
-      if (!scan.activeWeek) scan.setActiveWeek(1)
-      scan.setSession(cfg.session   || '2024/2025')
-      scan.setSemester(cfg.semester || 'Second Semester')
+      const semester = cfg.semester || 'Second Semester'
+      const session  = cfg.session  || '2024/2025'
+      scan.setSession(session)
+      scan.setSemester(semester)
+      if (c.length) {
+        scan.setActiveCourse(c[0])
+        const ws = await getScannedWeeks(c[0].id, semester, session)
+        const wsSet = new Set(ws)
+        setScannedWeeks(wsSet)
+        const totalWks = cfg.total_weeks || cfg.totalWeeks || 15
+        const firstFree = Array.from({ length: totalWks }, (_, i) => i + 1).find(w => !wsSet.has(w)) || 1
+        scan.setActiveWeek(firstFree)
+      } else if (!scan.activeWeek) {
+        scan.setActiveWeek(1)
+      }
       // Check server in background — non-blocking
       checkFaceServer().then(ok => setServerOnline(ok))
     } catch { toast('Failed to load data', 'error') }
@@ -305,8 +330,15 @@ export default function ScanPage() {
       const absentStudents  = absent.map(s => ({ ...s, status: 'Absent' }))
       scan.resetSession(); handleStopCamera()
       setFinaliseResult({ present: presentCount, absent: absent.length, course, week })
-      // Fire-and-forget email notifications — never blocks the UI
-      dispatchAttendanceEmails(presentStudents, absentStudents, course, week).catch(() => {})
+      // Mark week as scanned and auto-advance to next available week
+      setScannedWeeks(prev => {
+        const next = new Set(prev)
+        next.add(week)
+        const nextWeek = Array.from({ length: totalWeeks }, (_, i) => i + 1).find(w => !next.has(w))
+        if (nextWeek) scan.setActiveWeek(nextWeek)
+        return next
+      })
+      dispatchAttendanceNotifications(presentStudents, absentStudents, course, week).catch(() => {})
     } catch { toast('Failed to finalise', 'error') }
     finally { setFinalising(false); setShowFinalise(false) }
   }
@@ -333,21 +365,7 @@ export default function ScanPage() {
     finally { setManualMarking(false) }
   }
 
-  async function dispatchAttendanceEmails(presentList, absentList, course, week) {
-    const all = [...presentList, ...absentList]
-    if (!all.length) return
-
-    // Email — only for students with a verified email address
-    const emailRecords = await getStudentsWithVerifiedEmail(all.map(s => s.matric))
-    if (emailRecords.length) {
-      const emailMap = Object.fromEntries(emailRecords.map(r => [r.matric, r.email]))
-      const toQueue  = all
-        .filter(s => emailMap[s.matric])
-        .map(s => ({ matric: s.matric, name: s.name, email: emailMap[s.matric], status: s.status }))
-      await queueAttendanceNotifications(toQueue, course, week)
-    }
-
-    // Telegram — for students who have linked their account
+  async function dispatchAttendanceNotifications(presentList, absentList, course, week) {
     await dispatchTelegramNotifications(presentList, absentList, course, week, scan.semester, scan.session)
   }
 
@@ -475,9 +493,11 @@ export default function ScanPage() {
               <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>Week</span>
               <select value={scan.activeWeek} onChange={e => scan.setActiveWeek(+e.target.value)}
                 style={{ padding:'0.32rem 0.55rem', borderRadius:7, border:'1.5px solid #e2e8f0', fontSize:'0.78rem', fontWeight:700, color:'#1e293b', background:'#f8fafc', outline:'none', cursor:'pointer', fontFamily:'inherit' }}>
-                {Array.from({ length: totalWeeks }, (_, i) => (
-                  <option key={i+1} value={i+1}>Week {i+1} of {totalWeeks}</option>
-                ))}
+                {Array.from({ length: totalWeeks }, (_, i) => i + 1)
+                  .filter(w => !scannedWeeks.has(w))
+                  .map(w => (
+                    <option key={w} value={w}>Week {w} of {totalWeeks}</option>
+                  ))}
               </select>
             </div>
             <div style={{ width:1, height:24, background:'#e2e8f0', flexShrink:0 }}/>

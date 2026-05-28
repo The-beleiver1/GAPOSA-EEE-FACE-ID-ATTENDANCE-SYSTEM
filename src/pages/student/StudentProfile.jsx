@@ -34,7 +34,7 @@ export default function StudentProfile() {
     if (!matric) return
     const { data } = await supabase
       .from('students')
-      .select('matric,name,level,option,enrolled,email,email_verified,telegram_chat_id')
+      .select('matric,name,level,option,enrolled,telegram_chat_id')
       .ilike('matric', matric)
       .single()
     setStudent(data)
@@ -178,23 +178,6 @@ export default function StudentProfile() {
           <h3 style={{ margin: '0 0 0.9rem', fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
             Notifications
           </h3>
-
-          {/* Email row */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.7rem 0', borderBottom: '1px solid #f8fafc', gap: '1.5rem',
-          }}>
-            <span style={{ fontSize: '0.76rem', color: '#94a3b8', fontWeight: 600 }}>Email</span>
-            <span style={{
-              fontSize: '0.63rem', fontWeight: 800,
-              color:      student?.email_verified ? '#059669' : '#d97706',
-              background: student?.email_verified ? 'rgba(16,185,129,0.1)' : 'rgba(217,119,6,0.1)',
-              border:     `1px solid ${student?.email_verified ? 'rgba(16,185,129,0.22)' : 'rgba(217,119,6,0.22)'}`,
-              borderRadius: 99, padding: '3px 12px', letterSpacing: '0.05em',
-            }}>
-              {student?.email_verified ? 'Verified' : 'Not verified'}
-            </span>
-          </div>
 
           {/* Telegram row */}
           <div style={{ padding: '0.9rem 0 0.2rem' }}>

@@ -31,12 +31,13 @@ function initials(name) {
 }
 
 /* ── Course Assignment Modal ─────────────────────────────────── */
-function CourseModal({ lecturer, allCourses, onClose, onSave }) {
+function CourseModal({ lecturer, allCourses, takenCourseIds, onClose, onSave }) {
   const [selected, setSelected] = useState(lecturer.courses || [])
   const [search, setSearch]     = useState('')
   const [saving, setSaving]     = useState(false)
 
   function toggle(id) {
+    if (takenCourseIds.has(id)) return
     setSelected(p => p.includes(id) ? p.filter(c=>c!==id) : [...p, id])
   }
 
@@ -77,17 +78,23 @@ function CourseModal({ lecturer, allCourses, onClose, onSave }) {
           {filtered.length === 0 ? (
             <p style={{ textAlign:'center', color:'#94a3b8', fontSize:'0.83rem', padding:'2rem' }}>No courses found</p>
           ) : filtered.map((c, i) => {
-            const checked = selected.includes(c.id)
+            const checked  = selected.includes(c.id)
+            const taken    = takenCourseIds.has(c.id)
             return (
               <div key={c.id} onClick={()=>toggle(c.id)}
-                style={{ display:'flex', alignItems:'center', gap:'0.85rem', padding:'0.72rem 1.4rem', cursor:'pointer', background:checked?'rgba(47,160,132,0.04)':i%2===0?'#fafafa':'#fff', borderBottom:'1px solid #f1f5f9', transition:'background 0.12s' }}>
-                <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${checked?'#2FA084':'#cbd5e1'}`, background:checked?'#2FA084':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
+                style={{ display:'flex', alignItems:'center', gap:'0.85rem', padding:'0.72rem 1.4rem', cursor:taken?'default':'pointer', background:checked?'rgba(47,160,132,0.04)':taken?'#fafafa':i%2===0?'#fafafa':'#fff', borderBottom:'1px solid #f1f5f9', transition:'background 0.12s', opacity:taken?0.6:1 }}>
+                <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${checked?'#2FA084':taken?'#e2e8f0':'#cbd5e1'}`, background:checked?'#2FA084':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
                   {checked && <Check size={11} color="#fff" strokeWidth={3}/>}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ margin:0, fontSize:'0.83rem', fontWeight:700, color:checked?'#2FA084':'#1e293b' }}>{c.code}</p>
+                  <p style={{ margin:0, fontSize:'0.83rem', fontWeight:700, color:checked?'#2FA084':taken?'#94a3b8':'#1e293b' }}>{c.code}</p>
                   <p style={{ margin:0, fontSize:'0.72rem', color:'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.title}</p>
                 </div>
+                {taken && (
+                  <span style={{ fontSize:'0.62rem', fontWeight:800, color:'#d97706', background:'rgba(217,119,6,0.1)', border:'1px solid rgba(217,119,6,0.22)', borderRadius:99, padding:'2px 8px', flexShrink:0, letterSpacing:'0.04em' }}>
+                    Assigned
+                  </span>
+                )}
               </div>
             )
           })}
@@ -258,6 +265,11 @@ export default function LecturersPage() {
         <CourseModal
           lecturer={courseModal}
           allCourses={allCourses}
+          takenCourseIds={new Set(
+            lecturers
+              .filter(l => l.id !== courseModal.id)
+              .flatMap(l => l.courses || [])
+          )}
           onClose={()=>setCourseModal(null)}
           onSave={handleSaveCourses}
         />

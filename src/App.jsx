@@ -28,7 +28,6 @@ const StudentReenroll     = lazy(() => import('@/pages/student/StudentReenroll')
 const StudentNotifications = lazy(() => import('@/pages/student/StudentNotifications'))
 const StudentProfile      = lazy(() => import('@/pages/student/StudentProfile'))
 const StudentPinPage      = lazy(() => import('@/pages/student/StudentPinPage'))
-const StudentEmailPage    = lazy(() => import('@/pages/student/StudentEmailPage'))
 const StudentTelegramPage = lazy(() => import('@/pages/student/StudentTelegramPage'))
 
 // Lecturer portal
@@ -203,7 +202,6 @@ export default function App() {
             <Route path="/student/notifications"    element={<RequireStudent><StudentNotifications /></RequireStudent>} />
             <Route path="/student/profile"          element={<RequireStudent><StudentProfile /></RequireStudent>} />
             <Route path="/student/profile/pin"      element={<RequireStudent><StudentPinPage /></RequireStudent>} />
-            <Route path="/student/profile/email"    element={<RequireStudent><StudentEmailPage /></RequireStudent>} />
             <Route path="/student/profile/telegram" element={<RequireStudent><StudentTelegramPage /></RequireStudent>} />
 
             {/* Lecturer — guarded by Supabase Auth role */}

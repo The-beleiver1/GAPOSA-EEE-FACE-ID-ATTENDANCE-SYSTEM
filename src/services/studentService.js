@@ -683,6 +683,41 @@ export async function unlinkTelegram(matric) {
   if (error) throw new Error(error.message)
 }
 
+export async function getNotificationStatus(matric) {
+  const { data } = await supabase
+    .from('students')
+    .select('telegram_chat_id, email_verified')
+    .ilike('matric', matric)
+    .single()
+  return {
+    telegram: !!data?.telegram_chat_id,
+    email:    !!data?.email_verified,
+  }
+}
+
+export async function notifyStudent(matric, { text = '', subject = '', html = '' } = {}) {
+  await supabase.functions.invoke('notify-student', {
+    body: { type: 'event', matric, text, subject, html },
+  })
+}
+
+export async function notifyStudentWarning(matric, { name, courseCode, courseId, semester, session }) {
+  await supabase.functions.invoke('notify-student', {
+    body: { type: 'warning', matric, name, course_code: courseCode, course_id: courseId, semester, session },
+  })
+}
+
+export async function getScannedWeeks(courseId, semester, session) {
+  const { data } = await supabase
+    .from('attendance')
+    .select('week')
+    .eq('course_id', courseId)
+    .eq('semester', semester || '')
+    .eq('session',  session  || '')
+  if (!data?.length) return []
+  return [...new Set(data.map(r => r.week))]
+}
+
 export async function dispatchTelegramNotifications(presentList, absentList, course, week, semester, session) {
   const all = [
     ...presentList.map(s => ({ ...s, status: 'Present' })),

@@ -4,7 +4,8 @@ import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses, getSettings } from '@/services/courseService'
-import { getCourseAttendance, getEnrolledStudents } from '@/services/studentService'
+import { getCourseAttendance, getEnrolledStudents, notifyStudentWarning } from '@/services/studentService'
+import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import logoSrc from '@/assets/gaposa-logo.png'
 
@@ -159,6 +160,7 @@ async function printClassRegister(course, studentSummary, weeklyData, settings, 
 
 export default function LecturerReportsPage() {
   const { profile } = useAuthStore()
+  const { toast } = useToast()
   const [courses,        setCourses]        = useState([])
   const [students,       setStudents]       = useState([])
   const [settings,       setSettings]       = useState({})
@@ -168,6 +170,8 @@ export default function LecturerReportsPage() {
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [printing,       setPrinting]       = useState(false)
   const [activeTab,      setActiveTab]      = useState('summary')
+  const [warningSending, setWarningSending] = useState({})
+  const [warningSent,    setWarningSent]    = useState({})
 
   useEffect(() => {
     Promise.all([getLecturerCourses(profile.id), getEnrolledStudents(), getSettings()])
@@ -177,6 +181,7 @@ export default function LecturerReportsPage() {
 
   useEffect(() => {
     if (!selectedCourse) return
+    setWarningSent({})
     setLoadingRecords(true)
     getCourseAttendance(selectedCourse).then(setRecords).finally(() => setLoadingRecords(false))
   }, [selectedCourse])
@@ -215,6 +220,26 @@ export default function LecturerReportsPage() {
     setPrinting(true)
     try { await printClassRegister(course, studentSummary, weeklyData, settings, profile?.name || 'Lecturer') }
     finally { setPrinting(false) }
+  }
+
+  async function handleSendWarning(s) {
+    const key = `${s.matric}_${selectedCourse}`
+    setWarningSending(p => ({ ...p, [key]: true }))
+    try {
+      await notifyStudentWarning(s.matric, {
+        name:       s.name,
+        courseCode: course.code,
+        courseId:   selectedCourse,
+        semester:   settings.semester || '',
+        session:    settings.session  || '',
+      })
+      setWarningSent(p => ({ ...p, [key]: true }))
+      toast(`Warning letter sent to ${s.name}`, 'success')
+    } catch {
+      toast('Failed to send warning letter', 'error')
+    } finally {
+      setWarningSending(p => ({ ...p, [key]: false }))
+    }
   }
 
   const CARD = { background: '#fff', borderRadius: 14, border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', padding: '1rem 1.25rem' }
@@ -433,23 +458,58 @@ export default function LecturerReportsPage() {
             {/* At-risk banner */}
             {activeTab === 'summary' && studentSummary.filter(s => s.rate !== null && s.rate < 75).length > 0 && (
               <div style={{ background: '#fff', borderRadius: 14, border: '1px solid rgba(239,68,68,0.22)', padding: '1rem 1.25rem', marginTop: '0.75rem' }}>
-                <h2 style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', fontWeight: 800, color: '#dc2626' }}>
-                  At-Risk Students — Below 75%
-                </h2>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                  {studentSummary.filter(s => s.rate !== null && s.rate < 75).map(s => (
-                    <div key={s.matric} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.7rem', background: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>{s.name}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{s.matric}</span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626' }}>{s.rate}%</span>
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h2 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 800, color: '#dc2626' }}>
+                    At-Risk Students — Below 75%
+                  </h2>
+                  <button
+                    onClick={async () => {
+                      const atRisk = studentSummary.filter(s => s.rate !== null && s.rate < 75)
+                      for (const s of atRisk) {
+                        const key = `${s.matric}_${selectedCourse}`
+                        if (!warningSent[key]) await handleSendWarning(s)
+                      }
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.32rem 0.8rem', borderRadius: 7, border: '1px solid rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.06)', color: '#dc2626', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 12, height: 12 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                    Send All Warnings
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {studentSummary.filter(s => s.rate !== null && s.rate < 75).map(s => {
+                    const key     = `${s.matric}_${selectedCourse}`
+                    const sending = warningSending[key]
+                    const sent    = warningSent[key]
+                    return (
+                      <div key={s.matric} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', background: '#fef2f2', borderRadius: 9, border: '1px solid #fecaca' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                          <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontFamily: 'monospace', flexShrink: 0 }}>{s.matric}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626', flexShrink: 0 }}>{s.rate}%</span>
+                        </div>
+                        <button
+                          onClick={() => handleSendWarning(s)}
+                          disabled={sending || sent}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.28rem 0.65rem', borderRadius: 6, border: sent ? '1px solid #bbf7d0' : '1px solid rgba(220,38,38,0.3)', background: sent ? '#f0fdf4' : 'rgba(220,38,38,0.06)', color: sent ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: '0.65rem', cursor: sending || sent ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: sending ? 0.6 : 1, transition: 'all 0.2s' }}>
+                          {sending ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 10, height: 10, animation: 'spin 1s linear infinite' }}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                          ) : sent ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 10, height: 10 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 10, height: 10 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                          )}
+                          {sending ? 'Sending…' : sent ? 'Sent' : 'Send Warning'}
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </>
         )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </LecturerLayout>
   )
 }
