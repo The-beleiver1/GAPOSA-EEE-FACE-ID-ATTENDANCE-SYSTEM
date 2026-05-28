@@ -232,10 +232,24 @@ export function StudentLayout({ children }) {
             <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.85rem', lineHeight: 1 }}>|</span>
             <span style={{ color: '#6FCF97', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.05em' }}>STUDENT</span>
           </span>
-          <button onClick={toggleTheme} style={{ marginLeft: 'auto', padding: 7, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <button onClick={toggleTheme} style={{ padding: 7, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button onClick={handleLogout} style={{ padding: 7, borderRadius: 8, background: 'rgba(239,68,68,0.18)', border: 'none', cursor: 'pointer', color: '#fca5a5', display: 'flex', alignItems: 'center' }}>
+              <LogOut size={16} />
+            </button>
+          </div>
         </header>
+        {/* Desktop top-right action bar */}
+        <div className="hidden lg:flex" style={{ justifyContent: 'flex-end', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1.5rem', borderBottom: '1px solid #f1f5f9', background: '#fff', flexShrink: 0 }}>
+          <button onClick={toggleTheme} title={dark ? 'Light mode' : 'Dark mode'} style={{ padding: '6px 8px', borderRadius: 8, background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}>
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '6px 12px', borderRadius: 8, background: 'transparent', border: '1px solid #fecaca', cursor: 'pointer', color: '#dc2626', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'inherit', transition: 'all 0.15s' }}>
+            <LogOut size={13} /> Sign Out
+          </button>
+        </div>
         <main className="main-content">
           <div style={{ maxWidth: 940, margin: '0 auto' }}>
             {children}

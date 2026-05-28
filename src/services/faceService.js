@@ -60,12 +60,14 @@ export async function detectFace(videoEl) {
 // SSD detector works much better with larger images
 export function captureFrameAsBase64(videoEl) {
   const canvas = document.createElement('canvas')
-  // Use full camera resolution — do NOT downscale
-  canvas.width  = videoEl.videoWidth  || 1280
-  canvas.height = videoEl.videoHeight || 720
+  const vw = videoEl.videoWidth  || 1280
+  const vh = videoEl.videoHeight || 720
+  // Cap at 640×480 — ArcFace crops to 112×112 internally, full res just slows transfer
+  const scale   = Math.min(640 / vw, 480 / vh, 1)
+  canvas.width  = Math.round(vw * scale)
+  canvas.height = Math.round(vh * scale)
   canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height)
-  // Use higher quality JPEG for better detection
-  return canvas.toDataURL('image/jpeg', 0.95)
+  return canvas.toDataURL('image/jpeg', 0.75)
 }
 
 // ── Capture multiple frames ───────────────────────────────────────
@@ -80,19 +82,24 @@ export async function captureFrames(videoEl, count = 1) {
 
 // ── Get ArcFace embeddings from Python server ─────────────────────
 export async function getEmbeddingsFromServer(frames) {
-  const res = await fetch(`${FACE_SERVER}/embed/batch`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ images: frames }),
-  })
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Server error' }))
-    throw new Error(err.detail || 'Failed to get embeddings from server')
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 6000)
+  try {
+    const res = await fetch(`${FACE_SERVER}/embed/batch`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ images: frames }),
+      signal:  controller.signal,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Server error' }))
+      throw new Error(err.detail || 'Failed to get embeddings from server')
+    }
+    const data = await res.json()
+    return data.embeddings
+  } finally {
+    clearTimeout(tid)
   }
-
-  const data = await res.json()
-  return data.embeddings
 }
 
 // ── Verify two images are same person ────────────────────────────

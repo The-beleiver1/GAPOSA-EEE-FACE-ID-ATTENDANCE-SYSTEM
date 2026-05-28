@@ -151,7 +151,7 @@ export default function ScanPage() {
     if (!ok) return
     await startCamera('user')
     scan.setCameraActive(true)
-    scanIntervalRef.current = setInterval(runScan, 1500)
+    scanIntervalRef.current = setInterval(runScan, 800)
   }
 
   function handleStopCamera() {
