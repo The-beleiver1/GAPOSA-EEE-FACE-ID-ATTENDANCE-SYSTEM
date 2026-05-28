@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { approveLecturer, rejectLecturer } from '@/services/authService'
 import { getPendingLecturers } from '@/services/courseService'
+import { notifyStudent } from '@/services/studentService'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
@@ -67,21 +68,39 @@ export default function NotificationsPage() {
   async function handleReenrollApprove(r) {
     setApproving(r.id)
     try {
-      // Clear face data so student can re-enroll
       await supabase.from('face_descriptors').delete().eq('matric', r.matric)
       await supabase.from('students').update({ enrolled: false }).eq('matric', r.matric)
       await supabase.from('reenroll_requests').update({ status: 'approved' }).eq('id', r.id)
       setReenrollRequests(prev => prev.filter(x => x.id !== r.id))
       toast(`Re-enrolment approved — ${r.student_name || r.matric}'s face data cleared`, 'success')
+      notifyStudent(r.matric, {
+        text:
+          `&#9989; <b>RE-ENROLMENT APPROVED</b>\n` +
+          `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+          `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
+          `Your re-enrolment request has been <b>APPROVED</b>.\n\n` +
+          `Your face data has been cleared. Please re-enrol via the GAPOSA app:\n` +
+          `<b>Profile → Re-enrollment</b>\n\n` +
+          `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
+      }).catch(() => {})
     } catch { toast('Failed to approve re-enrolment', 'error') }
     finally { setApproving(null) }
   }
 
-  async function handleReenrollReject(id) {
+  async function handleReenrollReject(r) {
     try {
-      await supabase.from('reenroll_requests').update({ status: 'rejected' }).eq('id', id)
-      setReenrollRequests(prev => prev.filter(r => r.id !== id))
+      await supabase.from('reenroll_requests').update({ status: 'rejected' }).eq('id', r.id)
+      setReenrollRequests(prev => prev.filter(x => x.id !== r.id))
       toast('Re-enrolment rejected', 'success')
+      notifyStudent(r.matric, {
+        text:
+          `&#10060; <b>RE-ENROLMENT REJECTED</b>\n` +
+          `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+          `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
+          `Your re-enrolment request has been <b>REJECTED</b>.\n\n` +
+          `Contact admin if you believe this is incorrect.\n\n` +
+          `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
+      }).catch(() => {})
     } catch { toast('Failed to reject', 'error') }
   }
 
@@ -91,15 +110,33 @@ export default function NotificationsPage() {
       await supabase.from('absence_requests').update({ status: 'approved' }).eq('id', r.id)
       setAbsenceRequests(prev => prev.filter(x => x.id !== r.id))
       toast(`Absence approved for ${r.student_name || r.matric} — notify the relevant lecturer(s)`, 'success')
+      notifyStudent(r.matric, {
+        text:
+          `&#9989; <b>ABSENCE REQUEST APPROVED</b>\n` +
+          `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+          `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
+          `Your absence request has been <b>APPROVED</b>.\n\n` +
+          `The concerned lecturers will be notified.\n\n` +
+          `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
+      }).catch(() => {})
     } catch { toast('Failed to approve absence', 'error') }
     finally { setApproving(null) }
   }
 
-  async function handleAbsenceReject(id) {
+  async function handleAbsenceReject(r) {
     try {
-      await supabase.from('absence_requests').update({ status: 'rejected' }).eq('id', id)
-      setAbsenceRequests(prev => prev.filter(r => r.id !== id))
+      await supabase.from('absence_requests').update({ status: 'rejected' }).eq('id', r.id)
+      setAbsenceRequests(prev => prev.filter(x => x.id !== r.id))
       toast('Absence request rejected', 'success')
+      notifyStudent(r.matric, {
+        text:
+          `&#10060; <b>ABSENCE REQUEST REJECTED</b>\n` +
+          `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+          `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
+          `Your absence request has been <b>REJECTED</b>.\n\n` +
+          `Contact admin if you believe this is incorrect.\n\n` +
+          `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
+      }).catch(() => {})
     } catch { toast('Failed to reject', 'error') }
   }
 
@@ -211,7 +248,7 @@ export default function NotificationsPage() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
                             {approving === r.id ? <Spinner size={12} color="white"/> : <Check size={12} strokeWidth={2.5}/>} Approve & Clear Face Data
                           </button>
-                          <button onClick={() => handleReenrollReject(r.id)}
+                          <button onClick={() => handleReenrollReject(r)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-bold transition-all">
                             <X size={12} strokeWidth={2.5}/> Reject
                           </button>
@@ -269,7 +306,7 @@ export default function NotificationsPage() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
                             {approving === r.id ? <Spinner size={12} color="white"/> : <Check size={12} strokeWidth={2.5}/>} Approve
                           </button>
-                          <button onClick={() => handleAbsenceReject(r.id)}
+                          <button onClick={() => handleAbsenceReject(r)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-bold transition-all">
                             <X size={12} strokeWidth={2.5}/> Reject
                           </button>

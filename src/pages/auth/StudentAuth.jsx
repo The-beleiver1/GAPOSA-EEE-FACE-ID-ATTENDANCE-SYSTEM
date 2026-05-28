@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { hasStudentPin, verifyStudentPin, saveStudentPin, getStudentEmail, saveAndSendOTP, verifyEmailOTP } from '@/services/studentService'
-import { sendStudentOTP } from '@/services/emailService'
+import { hasStudentPin, verifyStudentPin, saveStudentPin, sendTelegramPinOTP, verifyTelegramOTP } from '@/services/studentService'
 import logo from '../../assets/gaposa-logo.png'
 import img1 from '@/assets/electric-pole-foggy-day.jpg'
 import img2 from '@/assets/warm-filament-bulbs-cast-cozy-amber-glow-dimly-lit-room.jpg'
@@ -28,7 +27,6 @@ export default function StudentAuth() {
   // Forgot PIN flow
   const [fpFlow,       setFpFlow]       = useState(false)
   const [fpStep,       setFpStep]       = useState('check')
-  const [fpEmail,      setFpEmail]      = useState('')
   const [fpOtp,        setFpOtp]        = useState('')
   const [fpNewPin,     setFpNewPin]     = useState('')
   const [fpConfirmPin, setFpConfirmPin] = useState('')
@@ -116,23 +114,19 @@ export default function StudentAuth() {
   async function handleForgotPin() {
     setFpError(''); setFpStep('sending')
     try {
-      const { email, email_verified } = await getStudentEmail(studentData.matric)
-      if (!email || !email_verified) {
-        setFpError('No verified email on file. Contact admin to reset your PIN.')
-        setFpStep('check'); return
-      }
-      setFpEmail(email)
-      const otp = await saveAndSendOTP(studentData.matric, email)
-      await sendStudentOTP(email, studentData.name, otp)
+      await sendTelegramPinOTP(studentData.matric)
       setFpStep('sent'); startFpCountdown(60)
-    } catch { setFpError('Failed to send reset code. Try again.'); setFpStep('check') }
+    } catch (err) {
+      setFpError(err.message || 'Failed to send reset code. Try again.')
+      setFpStep('check')
+    }
   }
 
   async function handleFpVerify(e) {
     e.preventDefault()
     setFpError(''); setFpStep('verifying')
     try {
-      const ok = await verifyEmailOTP(studentData.matric, fpEmail, fpOtp)
+      const ok = await verifyTelegramOTP(studentData.matric, fpOtp)
       if (!ok) { setFpError('Incorrect or expired code. Try again.'); setFpStep('sent'); return }
       setFpStep('new_pin')
     } catch { setFpError('Verification failed. Try again.'); setFpStep('sent') }
@@ -152,7 +146,7 @@ export default function StudentAuth() {
 
   function resetFpFlow() {
     setFpFlow(false); setFpStep('check'); setFpError('')
-    setFpOtp(''); setFpNewPin(''); setFpConfirmPin(''); setFpEmail('')
+    setFpOtp(''); setFpNewPin(''); setFpConfirmPin('')
     clearInterval(fpCdRef.current); setFpCountdown(0)
   }
 
@@ -321,8 +315,8 @@ export default function StudentAuth() {
                 </div>
 
                 <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.62)', fontSize: '0.76rem', textAlign: 'center', lineHeight: 1.55 }}>
-                  {(fpStep === 'check' || fpStep === 'sending') && 'A 6-digit reset code will be sent to your registered email.'}
-                  {fpStep === 'sent'      && <span>Code sent to <strong style={{ color: '#fff' }}>{fpEmail}</strong></span>}
+                  {(fpStep === 'check' || fpStep === 'sending') && 'A 6-digit reset code will be sent to your linked Telegram.'}
+                  {fpStep === 'sent'      && 'Code sent to your Telegram — check the bot.'}
                   {fpStep === 'verifying' && 'Verifying code…'}
                   {fpStep === 'new_pin'   && 'Verified! Set your new 4-digit PIN below.'}
                   {fpStep === 'saving'    && 'Saving new PIN…'}

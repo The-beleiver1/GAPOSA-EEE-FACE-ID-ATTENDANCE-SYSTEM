@@ -124,6 +124,44 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+    // ── PIN reset OTP via Telegram ────────────────────────────────
+    if (body.type === 'otp') {
+      const { matric } = body;
+
+      const { data: student } = await supabase
+        .from('students')
+        .select('telegram_chat_id, name')
+        .ilike('matric', matric)
+        .single();
+
+      if (!student?.telegram_chat_id) {
+        return new Response(JSON.stringify({ ok: false, sent: false, error: 'no_telegram' }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+      }
+
+      const otp        = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt  = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const firstName  = (student.name || 'Student').split(' ')[0];
+
+      await supabase.from('student_email_otps').delete().eq('matric', String(matric));
+      await supabase.from('student_email_otps').insert({
+        matric: String(matric), email: 'telegram', otp, expires_at: expiresAt,
+      });
+
+      await sendTelegram(student.telegram_chat_id,
+        `&#128272; <b>PIN RESET CODE</b>\n` +
+        `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+        `Hello <b>${firstName}</b>,\n\n` +
+        `Your PIN reset code is:\n\n` +
+        `<code>${otp}</code>\n\n` +
+        `Enter this in the GAPOSA app to reset your PIN.\n` +
+        `Expires in <b>10 minutes</b>.\n\n` +
+        `<i>If you did not request this, ignore this message.</i>\n\n` +
+        `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`
+      );
+
+      return new Response(JSON.stringify({ ok: true, sent: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+
     // ── Warning letter: query DB, calculate %, send if below 75% ──
     if (body.type === 'warning') {
       const { matric, name, course_code, course_id, semester, session } = body;

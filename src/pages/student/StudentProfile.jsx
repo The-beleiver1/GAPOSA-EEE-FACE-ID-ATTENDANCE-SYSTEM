@@ -4,7 +4,7 @@ import { StudentLayout } from '@/components/layout/StudentLayout'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { Spinner } from '@/components/ui/Spinner'
 import { supabase } from '@/lib/supabase'
-import { generateTelegramLinkCode, getTelegramLinked, unlinkTelegram } from '@/services/studentService'
+import { generateTelegramLinkCode, getTelegramLinked, unlinkTelegram, notifyStudent } from '@/services/studentService'
 
 const initials = name => (name || '').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
@@ -70,7 +70,20 @@ export default function StudentProfile() {
 
   async function handleUnlink() {
     setUnlinkLoading(true)
-    try { await unlinkTelegram(matric) } catch { /* silent */ }
+    try {
+      const name = student?.name || ''
+      await notifyStudent(matric, {
+        text:
+          `&#9888;&#65039; <b>TELEGRAM UNLINKED</b>\n` +
+          `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
+          `Hello <b>${name.split(' ')[0] || 'Student'}</b>,\n\n` +
+          `Your Telegram account has been <b>unlinked</b> from your GAPOSA profile.\n\n` +
+          `You will no longer receive attendance notifications here.\n\n` +
+          `To re-link, open the GAPOSA app → Profile → Telegram Alerts.\n\n` +
+          `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
+      }).catch(() => {})
+      await unlinkTelegram(matric)
+    } catch { /* silent */ }
     setTelegramLinked(false)
     setUnlinkLoading(false)
   }

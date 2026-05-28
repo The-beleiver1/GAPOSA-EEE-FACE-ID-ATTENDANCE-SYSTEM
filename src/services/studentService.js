@@ -683,6 +683,33 @@ export async function unlinkTelegram(matric) {
   if (error) throw new Error(error.message)
 }
 
+export async function sendTelegramPinOTP(matric) {
+  const { data, error } = await supabase.functions.invoke('notify-student', {
+    body: { type: 'otp', matric },
+  })
+  if (error) throw new Error('Failed to send OTP')
+  if (!data?.sent) throw new Error(
+    data?.error === 'no_telegram'
+      ? 'No Telegram linked. Contact admin to reset your PIN.'
+      : 'Failed to send OTP'
+  )
+  return true
+}
+
+export async function verifyTelegramOTP(matric, otp) {
+  const { data } = await supabase
+    .from('student_email_otps')
+    .select('*')
+    .eq('matric', String(matric))
+    .eq('email', 'telegram')
+    .eq('otp', String(otp))
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle()
+  if (!data) return false
+  await supabase.from('student_email_otps').delete().eq('matric', String(matric))
+  return true
+}
+
 export async function getNotificationStatus(matric) {
   const { data } = await supabase
     .from('students')
