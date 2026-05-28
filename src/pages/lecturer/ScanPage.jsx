@@ -6,7 +6,7 @@ import { useScanStore } from '@/store/scanStore'
 import { useCamera } from '@/hooks/useCamera'
 import { useToast } from '@/components/ui/Toast'
 import { captureFrameAsBase64, getEmbeddingsFromServer, checkFaceServer } from '@/services/faceService'
-import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, getStudentsWithVerifiedEmail, queueAttendanceNotifications } from '@/services/studentService'
+import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, getStudentsWithVerifiedEmail, queueAttendanceNotifications, dispatchTelegramNotifications } from '@/services/studentService'
 import { getLecturerCourses, getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/Modal'
@@ -336,15 +336,19 @@ export default function ScanPage() {
   async function dispatchAttendanceEmails(presentList, absentList, course, week) {
     const all = [...presentList, ...absentList]
     if (!all.length) return
-    // Fetch only students who have verified emails
+
+    // Email — only for students with a verified email address
     const emailRecords = await getStudentsWithVerifiedEmail(all.map(s => s.matric))
-    if (!emailRecords.length) return
-    const emailMap = Object.fromEntries(emailRecords.map(r => [r.matric, r.email]))
-    // Build queue rows — only for students with verified emails
-    const toQueue = all
-      .filter(s => emailMap[s.matric])
-      .map(s => ({ matric: s.matric, name: s.name, email: emailMap[s.matric], status: s.status }))
-    await queueAttendanceNotifications(toQueue, course, week)
+    if (emailRecords.length) {
+      const emailMap = Object.fromEntries(emailRecords.map(r => [r.matric, r.email]))
+      const toQueue  = all
+        .filter(s => emailMap[s.matric])
+        .map(s => ({ matric: s.matric, name: s.name, email: emailMap[s.matric], status: s.status }))
+      await queueAttendanceNotifications(toQueue, course, week)
+    }
+
+    // Telegram — for students who have linked their account
+    await dispatchTelegramNotifications(presentList, absentList, course, week, scan.semester, scan.session)
   }
 
   const totalWeeks = settings.total_weeks || settings.totalWeeks || 15

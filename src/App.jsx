@@ -29,6 +29,7 @@ const StudentNotifications = lazy(() => import('@/pages/student/StudentNotificat
 const StudentProfile      = lazy(() => import('@/pages/student/StudentProfile'))
 const StudentPinPage      = lazy(() => import('@/pages/student/StudentPinPage'))
 const StudentEmailPage    = lazy(() => import('@/pages/student/StudentEmailPage'))
+const StudentTelegramPage = lazy(() => import('@/pages/student/StudentTelegramPage'))
 
 // Lecturer portal
 const ScanPage            = lazy(() => import('@/pages/lecturer/ScanPage'))
@@ -151,6 +152,7 @@ export default function App() {
       () => import('@/pages/student/StudentProfile'),
       () => import('@/pages/student/StudentPinPage'),
       () => import('@/pages/student/StudentEmailPage'),
+      () => import('@/pages/student/StudentTelegramPage'),
       () => import('@/pages/student/EnrollFlow'),
       () => import('@/pages/lecturer/ScanPage'),
       () => import('@/pages/lecturer/AttendancePage'),
@@ -202,6 +204,7 @@ export default function App() {
             <Route path="/student/profile"          element={<RequireStudent><StudentProfile /></RequireStudent>} />
             <Route path="/student/profile/pin"      element={<RequireStudent><StudentPinPage /></RequireStudent>} />
             <Route path="/student/profile/email"    element={<RequireStudent><StudentEmailPage /></RequireStudent>} />
+            <Route path="/student/profile/telegram" element={<RequireStudent><StudentTelegramPage /></RequireStudent>} />
 
             {/* Lecturer — guarded by Supabase Auth role */}
             <Route path="/lecturer"                 element={<RequireRole role="lecturer"><ScanPage /></RequireRole>} />

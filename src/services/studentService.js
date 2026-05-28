@@ -637,3 +637,70 @@ export async function clearSessionData() {
     if (docs?.length) await supabase.storage.from('absence-docs').remove(docs.map(f => f.name))
   } catch { /* storage cleanup is best-effort */ }
 }
+
+// ── Telegram ──────────────────────────────────────────────────────
+
+function makeLinkCode() {
+  // Unambiguous characters only (no 0/O/1/I)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = 'LINK-'
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+export async function generateTelegramLinkCode(matric) {
+  // Expire any outstanding unused codes for this student first
+  await supabase
+    .from('telegram_link_codes')
+    .update({ used: true })
+    .eq('matric', String(matric))
+    .eq('used', false)
+
+  const code = makeLinkCode()
+  const { error } = await supabase.from('telegram_link_codes').insert({
+    matric:     String(matric),
+    code,
+    expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  })
+  if (error) throw new Error(error.message)
+  return code
+}
+
+export async function getTelegramLinked(matric) {
+  const { data } = await supabase
+    .from('students')
+    .select('telegram_chat_id')
+    .ilike('matric', matric)
+    .single()
+  return !!data?.telegram_chat_id
+}
+
+export async function unlinkTelegram(matric) {
+  const { error } = await supabase
+    .from('students')
+    .update({ telegram_chat_id: null })
+    .ilike('matric', matric)
+  if (error) throw new Error(error.message)
+}
+
+export async function dispatchTelegramNotifications(presentList, absentList, course, week, semester, session) {
+  const all = [
+    ...presentList.map(s => ({ ...s, status: 'Present' })),
+    ...absentList.map(s => ({ ...s, status: 'Absent'  })),
+  ]
+  if (!all.length) return
+
+  const notifications = all.map(s => ({
+    matric:      s.matric,
+    name:        s.name,
+    course_code: course?.code  || '',
+    course_id:   course?.id    || '',
+    week,
+    date:        new Date().toLocaleDateString('en-GB'),
+    status:      s.status,
+  }))
+
+  await supabase.functions.invoke('send-telegram', {
+    body: { notifications, semester, session },
+  })
+}

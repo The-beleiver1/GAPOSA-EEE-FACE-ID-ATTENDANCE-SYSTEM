@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Activity, CalendarX2, Fingerprint, LogOut, Menu, Bell, UserCircle, KeyRound, Mail, ChevronDown, Moon, Sun } from 'lucide-react'
+import { LayoutDashboard, Activity, CalendarX2, Fingerprint, LogOut, Menu, Bell, UserCircle, KeyRound, Mail, Send, ChevronDown, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -17,8 +17,9 @@ const NAV = [
 ]
 
 const PROFILE_CHILDREN = [
-  { to: '/student/profile/pin',   label: 'Set PIN',              Icon: KeyRound },
-  { to: '/student/profile/email', label: 'Email Notifications',  Icon: Mail     },
+  { to: '/student/profile/pin',      label: 'Set PIN',              Icon: KeyRound },
+  { to: '/student/profile/email',    label: 'Email Notifications',  Icon: Mail     },
+  { to: '/student/profile/telegram', label: 'Telegram Alerts',      Icon: Send     },
 ]
 
 export function StudentLayout({ children }) {
