@@ -188,7 +188,9 @@ export default function StudentDashboard() {
   let streak = 0
   for (const r of allRecs) { if (r.status === 'present' || r.present) streak++; else break }
 
-  const pctColor  = overallPct >= 75 ? '#6FCF97' : overallPct >= 50 ? '#fbbf24' : '#ff8080'
+  // Color thresholds deliberately offset from the 75% eligibility mark so the ring
+  // colour change never signals "you crossed the threshold"
+  const pctColor  = overallPct >= 90 ? '#6FCF97' : overallPct >= 60 ? '#fbbf24' : '#ff8080'
   // Semester progress: attended / expected-semester-total (15 classes per course, per semester)
   // Ring fill grows naturally from 0→100% over the semester; attendance rate shown as secondary text
   const estimatedSemesterTotal = Math.max(courses.length * 15, totalClasses)

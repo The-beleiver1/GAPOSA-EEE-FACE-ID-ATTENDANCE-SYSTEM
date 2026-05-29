@@ -73,15 +73,15 @@ export default function StudentNotifications() {
             type: 'info',
             icon: 'alert',
             title: 'Attendance Tracking Active',
-            body: `${totalSessions === 1 ? 'Your first class has been recorded.' : `${totalSessions} classes have been recorded so far.`} Your attendance is being tracked from the start of the semester. Eligibility for examinations requires a minimum of 75% attendance — attend every class consistently to build a strong record.`,
+            body: `${totalSessions === 1 ? 'Your first class has been recorded.' : `${totalSessions} classes have been recorded so far.`} Attendance is tracked from day one. Consistent class attendance is required throughout the semester — show up to every class without exception.`,
           })
         } else if (overall < 75) {
           items.push({
             id: 'overall',
             type: 'danger',
             icon: 'alert',
-            title: 'Overall Attendance Below Threshold',
-            body: `Your overall attendance is ${overall}%. You need ${75 - overall}% more to qualify for examinations. Attend upcoming classes consistently to reach the 75% requirement.`,
+            title: 'Attendance Below Required Level',
+            body: `Your overall attendance is ${overall}% — you are below the required level. You must not miss any more classes this semester. Attend every session without exception or you risk being barred from examinations.`,
           })
         } else {
           items.push({
@@ -89,7 +89,7 @@ export default function StudentNotifications() {
             type: 'warning',
             icon: 'alert',
             title: 'Keep Attending — Do Not Slow Down',
-            body: `Your attendance is currently ${overall}%. The 75% minimum applies to every class recorded — your rate updates downward with every absence. Past attendance does not protect you from missing future classes. Show up to every session.`,
+            body: `Your attendance is currently ${overall}%. This figure updates with every class recorded — a few consecutive absences is all it takes to fall below the required level. Past attendance offers no protection. Show up to every session.`,
           })
         }
 
@@ -102,7 +102,7 @@ export default function StudentNotifications() {
               type: 'warning',
               icon: 'alert',
               title: `${cid} — At Risk`,
-              body: `Current attendance: ${pct}% (${c.present}/${c.total} classes attended). Attend ${needed} more consecutive class${needed === 1 ? '' : 'es'} to reach the 75% threshold for this course.`,
+              body: `Current attendance: ${pct}% (${c.present}/${c.total} classes attended). Attend ${needed} more consecutive class${needed === 1 ? '' : 'es'} without absence to recover your standing in this course.`,
             })
           }
         }

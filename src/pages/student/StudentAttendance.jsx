@@ -153,9 +153,9 @@ async function buildPrintCourse(course, studentName, matric, student) {
     <div class="divider"></div>
     <div class="stat"><p class="stat-val" style="color:#dc2626">${course.absent}</p><p class="stat-lbl">Absent</p></div>
     <div class="divider"></div>
-    <div class="stat"><p class="stat-val" style="color:${course.pct>=75?'#16a34a':course.pct>=50?'#d97706':'#dc2626'}">${course.pct}%</p><p class="stat-lbl">Attendance</p></div>
+    <div class="stat"><p class="stat-val" style="color:${course.pct>=90?'#16a34a':course.pct>=60?'#d97706':'#dc2626'}">${course.pct}%</p><p class="stat-lbl">Attendance</p></div>
     <div class="divider"></div>
-    <div class="stat"><span class="badge ${course.pct>=90?'el':course.pct>=75?'warn':'ar'}">${course.pct>=90?'Excellent':course.pct>=75?'Needs Improvement':'Critical'}</span></div>
+    <div class="stat"><span class="badge ${course.pct>=90?'el':course.pct>=60?'warn':'ar'}">${course.pct>=90?'Consistent':course.pct>=60?'Keep Attending':'At Risk'}</span></div>
   </div>
   <table>
     <thead><tr><th>Date</th><th>Week</th><th>Semester</th><th>Status</th></tr></thead>
@@ -170,15 +170,15 @@ async function buildPrintCourse(course, studentName, matric, student) {
 
 async function buildPrintAll(courses, studentName, matric, student) {
   const logoDataUrl = await getLogoDataUrl()
-  const eligible = courses.filter(c => c.pct >= 90).length
-  const atRisk   = courses.filter(c => c.total > 0 && c.pct < 90).length
+  const consistent = courses.filter(c => c.pct >= 90).length
+  const atRisk     = courses.filter(c => c.total > 0 && c.pct < 60).length
   const rows = courses.map(c => `<tr>
     <td><strong style="color:#1e3a5f">${c.code}</strong>${c.title ? `<br><span style="font-size:11px;color:#6b7280">${c.title}</span>` : ''}</td>
     <td style="text-align:center">${c.total}</td>
     <td style="text-align:center;color:#16a34a;font-weight:700">${c.present}</td>
     <td style="text-align:center;color:#dc2626;font-weight:700">${c.absent}</td>
-    <td style="text-align:center;font-weight:800;color:${c.pct>=75?'#16a34a':c.pct>=50?'#d97706':'#dc2626'}">${c.pct}%</td>
-    <td><span style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:800;background:${c.pct>=90?'#dcfce7':c.pct>=75?'#fef9c3':'#fee2e2'};color:${c.pct>=90?'#166534':c.pct>=75?'#92400e':'#991b1b'}">${c.pct>=90?'Excellent':c.pct>=75?'Needs Improvement':'Critical'}</span></td>
+    <td style="text-align:center;font-weight:800;color:${c.pct>=90?'#16a34a':c.pct>=60?'#d97706':'#dc2626'}">${c.pct}%</td>
+    <td><span style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:800;background:${c.pct>=90?'#dcfce7':c.pct>=60?'#fef9c3':'#fee2e2'};color:${c.pct>=90?'#166534':c.pct>=60?'#92400e':'#991b1b'}">${c.pct>=90?'Consistent':c.pct>=60?'Keep Attending':'At Risk'}</span></td>
   </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Full Attendance Report</title>
   <style>
@@ -202,8 +202,8 @@ async function buildPrintAll(courses, studentName, matric, student) {
   ${studentMeta(studentName, matric, student)}
   <div class="overview">
     <div class="ov-cell"><p class="ov-val" style="color:#2563eb">${courses.length}</p><p class="ov-lbl">Total Courses</p></div>
-    <div class="ov-cell"><p class="ov-val" style="color:#16a34a">${eligible}</p><p class="ov-lbl">Excellent ≥90%</p></div>
-    <div class="ov-cell"><p class="ov-val" style="color:#dc2626">${atRisk}</p><p class="ov-lbl">Need Attention</p></div>
+    <div class="ov-cell"><p class="ov-val" style="color:#2FA084">${consistent}</p><p class="ov-lbl">Consistent</p></div>
+    <div class="ov-cell"><p class="ov-val" style="color:#dc2626">${atRisk}</p><p class="ov-lbl">At Risk</p></div>
   </div>
   <table>
     <thead><tr><th>Course</th><th style="text-align:center">Total</th><th style="text-align:center">Present</th><th style="text-align:center">Absent</th><th style="text-align:center">Attendance</th><th>Status</th></tr></thead>
