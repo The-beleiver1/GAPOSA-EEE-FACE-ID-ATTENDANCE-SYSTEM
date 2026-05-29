@@ -49,6 +49,7 @@ const NotificationsPage   = lazy(() => import('@/pages/admin/NotificationsPage')
 const EligibilityPage     = lazy(() => import('@/pages/admin/EligibilityPage'))
 const AuditLogPage        = lazy(() => import('@/pages/admin/AuditLogPage'))
 const HODAnalyticsPage    = lazy(() => import('@/pages/admin/HODAnalyticsPage'))
+const VerifyPage          = lazy(() => import('@/pages/VerifyPage'))
 
 // ── Route guards ─────────────────────────────────────────────────────
 
@@ -185,6 +186,7 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/"                         element={<LandingPage />} />
+            <Route path="/verify"                   element={<VerifyPage />} />
             <Route path="/auth/lecturer"            element={<LecturerAuth />} />
             <Route path="/auth/admin"               element={<AdminAuth />} />
             <Route path="/auth/student"             element={<StudentAuth />} />

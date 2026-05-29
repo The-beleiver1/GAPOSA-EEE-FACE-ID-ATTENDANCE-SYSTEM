@@ -219,6 +219,19 @@ async function buildPrintAll(courses, studentName, matric, student) {
 async function buildAttendanceCertificate(courses, studentName, matric, student, settings) {
   const logoDataUrl = await getLogoDataUrl()
   const date  = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Build verification QR code — encodes a snapshot of this certificate
+  const snap = {
+    v: 1, m: matric, n: studentName,
+    lv: student?.level || '', op: student?.option || '',
+    ss: settings?.session || '', sm: settings?.semester || '',
+    dt: new Date().toISOString().slice(0, 10),
+    cs: courses.map(c => ({ c: c.code, p: c.present, t: c.total })),
+  }
+  const encoded    = btoa(encodeURIComponent(JSON.stringify(snap)).replace(/%([0-9A-F]{2})/gi, (_, p) => String.fromCharCode(parseInt(p, 16))))
+  const verifyUrl  = `${window.location.origin}/verify?c=${encoded}`
+  const QRCode     = (await import('qrcode')).default
+  const qrDataUrl  = await QRCode.toDataURL(verifyUrl, { width: 110, margin: 1, color: { dark: '#1F6F5F', light: '#ffffff' } })
   const overall = courses.length > 0
     ? Math.round(courses.reduce((s, c) => s + c.present, 0) / Math.max(courses.reduce((s, c) => s + c.total, 0), 1) * 100)
     : 0
@@ -294,14 +307,20 @@ async function buildAttendanceCertificate(courses, studentName, matric, student,
     </tfoot>
   </table>
 
-  <div class="sig">
-    <div>
-      <div style="height:40px"></div>
-      <p class="sig-line">Head of Department<br><span style="font-weight:400;color:#6b7280">Dept. of Electrical / Electronics Engineering</span></p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px;align-items:end">
+    <div class="sig">
+      <div>
+        <div style="height:40px"></div>
+        <p class="sig-line">Head of Department<br><span style="font-weight:400;color:#6b7280">Dept. of Electrical / Electronics Engineering</span></p>
+      </div>
+      <div>
+        <div style="height:40px"></div>
+        <p class="sig-line">Academic Affairs Officer<br><span style="font-weight:400;color:#6b7280">Gateway ICT Polytechnic, Saapade</span></p>
+      </div>
     </div>
-    <div>
-      <div style="height:40px"></div>
-      <p class="sig-line">Academic Affairs Officer<br><span style="font-weight:400;color:#6b7280">Gateway ICT Polytechnic, Saapade</span></p>
+    <div style="text-align:right;padding-bottom:6px">
+      <img src="${qrDataUrl}" width="90" height="90" style="display:inline-block;border:2px solid #e2e8f0;border-radius:8px;padding:4px;background:#fff" alt="Verify QR"/>
+      <p style="margin:4px 0 0;font-size:8px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Scan to verify authenticity</p>
     </div>
   </div>
 
