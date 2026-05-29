@@ -618,18 +618,24 @@ export async function getAllAbsenceRequests() {
 
 export async function clearSessionData() {
   const tables = [
-    { table: 'student_email_otps', col: 'matric' },
-    { table: 'reenroll_requests',  col: 'matric' },
-    { table: 'absence_requests',   col: 'matric' },
-    { table: 'attendance',         col: 'matric' },
-    { table: 'face_descriptors',   col: 'matric' },
-    { table: 'students',           col: 'matric' },
+    { table: 'student_email_otps',          col: 'matric' },
+    { table: 'telegram_link_codes',          col: 'matric' },
+    { table: 'attendance_disputes',          col: 'matric' },
+    { table: 'attendance_notifications_queue', col: 'matric' },
+    { table: 'reenroll_requests',            col: 'matric' },
+    { table: 'absence_requests',             col: 'matric' },
+    { table: 'attendance',                   col: 'matric' },
+    { table: 'face_descriptors',             col: 'matric' },
+    { table: 'students',                     col: 'matric' },
   ]
   for (const { table, col } of tables) {
     const { error } = await supabase.from(table).delete().not(col, 'is', null)
-    if (error && !error.message.includes('0 rows')) throw new Error(`Failed clearing ${table}: ${error.message}`)
+    if (error && !error.message.includes('0 rows') && !error.message.includes('does not exist'))
+      throw new Error(`Failed clearing ${table}: ${error.message}`)
   }
-  // Clear student photos from storage
+  // Clear audit log (no matric column — delete all rows)
+  await supabase.from('audit_logs').delete().not('id', 'is', null).catch(() => {})
+  // Clear student photos and absence docs from storage
   try {
     const { data: photos } = await supabase.storage.from('student - photos').list()
     if (photos?.length) await supabase.storage.from('student - photos').remove(photos.map(f => f.name))
