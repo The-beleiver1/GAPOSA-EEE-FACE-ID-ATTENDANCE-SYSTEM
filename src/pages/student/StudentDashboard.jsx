@@ -230,15 +230,20 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <svg width={124} height={124} viewBox="0 0 124 124"
-                style={{ display: 'block', flexShrink: 0, width: 'clamp(86px, 22vw, 124px)', height: 'clamp(86px, 22vw, 124px)' }}>
+                style={{ display: 'block', flexShrink: 0, width: 'clamp(96px, 24vw, 130px)', height: 'clamp(96px, 24vw, 130px)' }}>
                 {(() => { const R=46,C=2*Math.PI*R,dash=(semesterPct/100)*C; return (<>
-                  <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10}/>
+                  <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={10}/>
                   <circle cx={62} cy={62} r={R} fill="none" stroke={pctColor} strokeWidth={10}
                     strokeDasharray={`${dash} ${C}`} strokeLinecap="round" transform="rotate(-90 62 62)"
-                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${pctColor}88)`}}/>
-                  <text x={62} y={47} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={22} fontWeight={900} fontFamily="inherit">{semesterPct}%</text>
-                  <text x={62} y={64} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.7)" fontSize={8} fontWeight={700} fontFamily="inherit">{overallPct}% rate</text>
-                  <text x={62} y={75} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize={7.5} fontWeight={600} fontFamily="inherit">{attendedClasses}/{totalClasses} classes</text>
+                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 8px ${pctColor}aa)`}}/>
+                  {/* Primary metric */}
+                  <text x={62} y={46} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={27} fontWeight={900} fontFamily="inherit" letterSpacing="-0.5">{semesterPct}%</text>
+                  {/* Hairline divider */}
+                  <line x1={40} y1={59} x2={84} y2={59} stroke="rgba(255,255,255,0.2)" strokeWidth={0.75}/>
+                  {/* Attendance rate — clearly visible secondary label */}
+                  <text x={62} y={69} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.92)" fontSize={12} fontWeight={700} fontFamily="inherit" letterSpacing="0.2">{overallPct}% rate</text>
+                  {/* Class count — tertiary context */}
+                  <text x={62} y={81} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.65)" fontSize={10.5} fontWeight={600} fontFamily="inherit">{attendedClasses} of {totalClasses}</text>
                 </>)})()}
               </svg>
             </div>
