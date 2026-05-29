@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { Scan, CalendarCheck, Users, BookOpen, BarChart3, CircleUser, LogOut, Menu, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/services/authService'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import { useToast } from '@/components/ui/Toast'
 import { getInitials } from '@/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -23,6 +24,7 @@ export function LecturerLayout({ children }) {
   const { toast } = useToast()
   const { dark, toggle: toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
+  useAutoLogout()
 
   async function handleLogout() {
     await signOut(); logout(); navigate('/'); toast('Logged out', 'success')

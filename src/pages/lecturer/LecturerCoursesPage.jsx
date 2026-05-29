@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Send, X } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses } from '@/services/courseService'
-import { getCourseAttendance, getEnrolledStudents } from '@/services/studentService'
+import { getCourseAttendance, getEnrolledStudents, notifyStudent } from '@/services/studentService'
 import { Spinner } from '@/components/ui/Spinner'
+import { useToast } from '@/components/ui/Toast'
 import { normalizeLevel, levelFromCourseCode } from '@/utils'
 
 export default function LecturerCoursesPage() {
   const { profile } = useAuthStore()
+  const { toast } = useToast()
   const [courses, setCourses] = useState([])
   const [students, setStudents] = useState([])
   const [stats, setStats] = useState({})
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
+  const [announceCourse, setAnnounceCourse] = useState(null)
+  const [announceText, setAnnounceText] = useState('')
+  const [announcing, setAnnouncing] = useState(false)
 
   useEffect(() => {
     Promise.all([getLecturerCourses(profile.id), getEnrolledStudents()])
@@ -34,6 +39,24 @@ export default function LecturerCoursesPage() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleAnnounce() {
+    if (!announceText.trim() || !announceCourse) return
+    setAnnouncing(true)
+    const cl = levelFromCourseCode(announceCourse.code) || normalizeLevel(announceCourse.level)
+    const targets = students.filter(s => normalizeLevel(s.level) === normalizeLevel(cl))
+    let sent = 0
+    for (const s of targets) {
+      try {
+        await notifyStudent(s.matric, {
+          text: `&#128226; <b>COURSE ANNOUNCEMENT</b>\n&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n<b>${announceCourse.code}</b>\n\n${announceText}\n\n<i>${profile?.name || 'Lecturer'} · EEE FACE-ID</i>`,
+        })
+        sent++
+      } catch { /* silent — send to as many as possible */ }
+    }
+    toast(`Announcement sent to ${sent} student${sent !== 1 ? 's' : ''}`, 'success')
+    setAnnouncing(false); setAnnounceCourse(null); setAnnounceText('')
+  }
 
   if (loading) return (
     <LecturerLayout>
@@ -131,10 +154,15 @@ export default function LecturerCoursesPage() {
                         ))}
                       </div>
                       {course.units && (
-                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                        <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', color: '#64748b' }}>
                           <span style={{ fontWeight: 700, color: '#334155' }}>Credit Units:</span> {course.units}
                         </p>
                       )}
+                      <button
+                        onClick={e => { e.stopPropagation(); setAnnounceCourse(course); setAnnounceText('') }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', borderRadius: 8, border: '1px solid rgba(47,160,132,0.3)', background: 'rgba(47,160,132,0.06)', color: '#2FA084', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <Send size={13} /> Announce to Students
+                      </button>
                     </div>
                   )}
                 </div>
@@ -143,6 +171,35 @@ export default function LecturerCoursesPage() {
           </div>
         )}
       </div>
+
+      {/* Announce modal */}
+      {announceCourse && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(4px)' }}>
+          <div style={{ width:'92vw', maxWidth:440, borderRadius:18, background:'#fff', boxShadow:'0 24px 80px rgba(0,0,0,0.2)', padding:'1.5rem' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
+              <div>
+                <p style={{ margin:0, fontWeight:800, fontSize:'0.95rem', color:'#0f172a' }}>Announce to {announceCourse.code}</p>
+                <p style={{ margin:'0.1rem 0 0', fontSize:'0.75rem', color:'#64748b' }}>Message will be sent via Telegram to all enrolled students</p>
+              </div>
+              <button onClick={() => setAnnounceCourse(null)} style={{ padding:6, borderRadius:8, border:'none', background:'#f1f5f9', cursor:'pointer', display:'flex', alignItems:'center', color:'#64748b' }}><X size={15}/></button>
+            </div>
+            <textarea value={announceText} onChange={e => setAnnounceText(e.target.value)}
+              placeholder="Type your announcement…"
+              rows={5}
+              style={{ width:'100%', padding:'0.75rem', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:'0.85rem', fontFamily:'inherit', color:'#1e293b', resize:'vertical', outline:'none', boxSizing:'border-box', marginBottom:'0.85rem' }} />
+            <div style={{ display:'flex', gap:'0.55rem' }}>
+              <button onClick={() => setAnnounceCourse(null)}
+                style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontWeight:600, fontSize:'0.85rem', cursor:'pointer', fontFamily:'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={handleAnnounce} disabled={announcing || !announceText.trim()}
+                style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem', padding:'0.7rem', borderRadius:10, border:'none', background:announcing||!announceText.trim()?'rgba(47,160,132,0.4)':'#2FA084', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:announcing||!announceText.trim()?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                {announcing ? <><Spinner size={13} color="white"/> Sending…</> : <><Send size={13}/> Send Announcement</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LecturerLayout>
   )
 }

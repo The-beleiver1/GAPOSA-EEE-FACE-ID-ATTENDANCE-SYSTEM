@@ -3,7 +3,7 @@ import { Search, Printer, Trash2, Users, ClipboardList, X, CheckCircle, AlertTri
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
-import { getEnrolledStudents, deleteStudent, getStudentAttendance, updateAttendanceRecord } from '@/services/studentService'
+import { getEnrolledStudents, deleteStudent, getStudentAttendance, updateAttendanceRecord, logAudit } from '@/services/studentService'
 import { getCourses } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
@@ -61,6 +61,7 @@ export default function StudentsPage() {
     setDeleting(true)
     try {
       await deleteStudent(confirmDelete.matric)
+      logAudit(profile, 'delete_student', 'student', confirmDelete.matric, { name: confirmDelete.name })
       setStudents(prev => prev.filter(s => s.matric !== confirmDelete.matric))
       toast('Student record deleted', 'success')
       setConfirmDelete(null)
@@ -83,6 +84,7 @@ export default function StudentsPage() {
     setSavingId(record.id)
     try {
       await updateAttendanceRecord(record.id, newStatus)
+      logAudit(profile, 'update_attendance', 'attendance', record.id, { matric: attStudent?.matric, week: record.week, old: record.status, new: newStatus })
       setAttRecords(prev => prev.map(r => r.id === record.id ? { ...r, status: newStatus, present: newStatus === 'present' } : r))
       toast('Attendance updated', 'success')
     } catch { toast('Failed to update', 'error') }

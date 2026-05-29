@@ -766,3 +766,89 @@ export async function dispatchTelegramNotifications(presentList, absentList, cou
     body: { notifications, semester, session },
   })
 }
+
+// ── Attendance Disputes ───────────────────────────────────────────
+export async function submitAttendanceDispute({ matric, studentName, attendanceId, courseId, courseCode, week, date, description }) {
+  const { error } = await supabase.from('attendance_disputes').insert({
+    matric, student_name: studentName, attendance_id: attendanceId,
+    course_id: courseId, course_code: courseCode, week, date, description, status: 'pending',
+  })
+  if (error) throw new Error(error.message)
+}
+
+export async function getMyDisputes(matric) {
+  const { data } = await supabase
+    .from('attendance_disputes').select('*')
+    .eq('matric', matric).order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function getPendingDisputesForCourses(courseIds) {
+  if (!courseIds?.length) return []
+  const { data } = await supabase
+    .from('attendance_disputes').select('*')
+    .in('course_id', courseIds).eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+export async function resolveDispute(disputeId, status, lecturerNote, attendanceId) {
+  await supabase.from('attendance_disputes')
+    .update({ status, lecturer_note: lecturerNote }).eq('id', disputeId)
+  if (status === 'approved' && attendanceId) {
+    await supabase.from('attendance')
+      .update({ status: 'present', present: true }).eq('id', attendanceId)
+  }
+}
+
+// ── Bulk attendance import ────────────────────────────────────────
+export async function bulkMarkAttendance(records) {
+  const toInsert = records.map(r => ({
+    matric:      r.matric,
+    name:        r.name        || '',
+    course_id:   r.courseId,
+    week:        r.week,
+    status:      r.status,
+    present:     r.status === 'present',
+    confidence:  0,
+    lecturer_id: r.lecturerId  || null,
+    semester:    r.semester    || '',
+    session:     r.session     || '',
+    date:        new Date().toLocaleDateString('en-GB'),
+    timestamp:   new Date().toISOString(),
+  }))
+  const { error } = await supabase.from('attendance').upsert(toInsert, {
+    onConflict: 'matric,course_id,week,semester,session',
+  })
+  if (error) throw new Error(error.message)
+  return toInsert.length
+}
+
+// ── Audit log ─────────────────────────────────────────────────────
+export async function logAudit(userProfile, action, targetType, targetId, details = {}) {
+  supabase.from('audit_logs').insert({
+    user_id:     userProfile?.id,
+    user_name:   userProfile?.name || userProfile?.email || 'Unknown',
+    user_role:   userProfile?.role || 'admin',
+    action,
+    target_type: targetType,
+    target_id:   String(targetId || ''),
+    details,
+  }).then(() => {}).catch(() => {})
+}
+
+export async function getAuditLogs(limit = 200) {
+  const { data } = await supabase
+    .from('audit_logs').select('*')
+    .order('created_at', { ascending: false }).limit(limit)
+  return data || []
+}
+
+// ── Telegram status check ─────────────────────────────────────────
+export async function getStudentsTelegramStatus(matricList) {
+  if (!matricList?.length) return {}
+  const { data } = await supabase
+    .from('students').select('matric, telegram_chat_id').in('matric', matricList)
+  if (!data) return {}
+  return Object.fromEntries(data.map(s => [s.matric, !!s.telegram_chat_id]))
+}

@@ -34,7 +34,10 @@
       "Bash(git rm *)",
       "Bash(git reset *)",
       "Bash(git update-ref *)",
-      "Bash(git gc *)"
+      "Bash(git gc *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\\\\src\\\\pages\\\\admin\" -File)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dell\\\\Documents\\\\GitHub\\\\gaposa\" -Recurse -Include \"*.jsx\", \"*.js\", \"*.json\")"
     ]
   }
 }

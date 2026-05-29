@@ -46,6 +46,8 @@ const CoursesPage         = lazy(() => import('@/pages/admin/CoursesPage'))
 const LecturersPage       = lazy(() => import('@/pages/admin/LecturersPage'))
 const SettingsPage        = lazy(() => import('@/pages/admin/SettingsPage'))
 const NotificationsPage   = lazy(() => import('@/pages/admin/NotificationsPage'))
+const EligibilityPage     = lazy(() => import('@/pages/admin/EligibilityPage'))
+const AuditLogPage        = lazy(() => import('@/pages/admin/AuditLogPage'))
 
 // ── Route guards ─────────────────────────────────────────────────────
 
@@ -220,6 +222,8 @@ export default function App() {
             <Route path="/admin/lecturers"          element={<RequireRole role="admin"><LecturersPage /></RequireRole>} />
             <Route path="/admin/settings"           element={<RequireRole role="admin"><SettingsPage /></RequireRole>} />
             <Route path="/admin/notifications"      element={<RequireRole role="admin"><NotificationsPage /></RequireRole>} />
+            <Route path="/admin/eligibility"        element={<RequireRole role="admin"><EligibilityPage /></RequireRole>} />
+            <Route path="/admin/audit"              element={<RequireRole role="admin"><AuditLogPage /></RequireRole>} />
 
             {/* Catch all */}
             <Route path="*"                         element={<Navigate to="/" replace />} />

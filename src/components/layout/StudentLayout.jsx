@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Activity, CalendarX2, Fingerprint, LogOut, Menu, Bell, UserCircle, KeyRound, Send, ChevronDown, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getAttendanceSummary, getMyAbsenceRequests, getMyReenrollRequests } from '@/services/studentService'
 import { getInitials } from '@/utils'
@@ -27,6 +28,7 @@ export function StudentLayout({ children }) {
   const location     = useLocation()
   const { dark, toggle: toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
+  useAutoLogout()
 
   const isProfileRoute = location.pathname.startsWith('/student/profile')
   const [profileOpen, setProfileOpen] = useState(isProfileRoute)

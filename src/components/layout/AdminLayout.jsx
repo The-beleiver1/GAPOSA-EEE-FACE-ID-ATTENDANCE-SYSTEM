@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
-  Menu, Bell, Moon, Sun, Layers,
+  Menu, Bell, Moon, Sun, Layers, ShieldCheck, ClipboardList,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/services/authService'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import { useToast } from '@/components/ui/Toast'
 import { getInitials } from '@/utils'
 import { supabase } from '@/lib/supabase'
@@ -13,12 +14,14 @@ import { useTheme } from '@/contexts/ThemeContext'
 import logo from '@/assets/gaposa-logo.png'
 
 const NAV = [
-  { to: '/admin',            label: 'Dashboard',   Icon: LayoutDashboard, end: true  },
-  { to: '/admin/students',   label: 'Students',    Icon: Users,           end: false },
-  { to: '/admin/masterlist', label: 'Master List', Icon: BookOpen,        end: false },
-  { to: '/admin/courses',    label: 'Courses',     Icon: Layers,          end: false },
-  { to: '/admin/lecturers',  label: 'Lecturers',   Icon: GraduationCap,   end: false },
-  { to: '/admin/settings',   label: 'Settings',    Icon: Settings,        end: false },
+  { to: '/admin',              label: 'Dashboard',   Icon: LayoutDashboard, end: true  },
+  { to: '/admin/students',     label: 'Students',    Icon: Users,           end: false },
+  { to: '/admin/masterlist',   label: 'Master List', Icon: BookOpen,        end: false },
+  { to: '/admin/courses',      label: 'Courses',     Icon: Layers,          end: false },
+  { to: '/admin/lecturers',    label: 'Lecturers',   Icon: GraduationCap,   end: false },
+  { to: '/admin/eligibility',  label: 'Eligibility', Icon: ShieldCheck,     end: false },
+  { to: '/admin/audit',        label: 'Audit Log',   Icon: ClipboardList,   end: false },
+  { to: '/admin/settings',     label: 'Settings',    Icon: Settings,        end: false },
 ]
 
 export function AdminLayout({ children }) {
@@ -28,6 +31,7 @@ export function AdminLayout({ children }) {
   const { dark, toggle: toggleTheme } = useTheme()
   const [open, setOpen]             = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  useAutoLogout()
 
   useEffect(() => {
     async function fetchPending() {

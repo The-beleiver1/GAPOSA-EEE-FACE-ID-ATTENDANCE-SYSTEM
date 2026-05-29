@@ -15,8 +15,11 @@ const INP  = { width: '100%', padding: '0.7rem 0.9rem', borderRadius: 11, border
 
 export default function SettingsPage() {
   const { profile } = useAuthStore()
-  const [settings, setSettings] = useState(null)
-  const [saving,   setSaving]   = useState(false)
+  const [settings,        setSettings]        = useState(null)
+  const [saving,          setSaving]          = useState(false)
+  const [origSession,     setOrigSession]     = useState(null)
+  const [origSemester,    setOrigSemester]    = useState(null)
+  const [showArchivePrompt, setShowArchivePrompt] = useState(false)
   const [exporting,      setExporting]      = useState(false)
   const [courses,        setCourses]        = useState([])
   const [exportCourse,   setExportCourse]   = useState('all')
@@ -38,7 +41,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([getSettings(), getCourses(), getSessionArchives()])
-      .then(([s, c, a]) => { setSettings(s); setCourses(c); setArchives(a) })
+      .then(([s, c, a]) => {
+        setSettings(s); setCourses(c); setArchives(a)
+        setOrigSession(s.session); setOrigSemester(s.semester)
+      })
   }, [])
 
   useEffect(() => {
@@ -53,9 +59,22 @@ export default function SettingsPage() {
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }))
 
   async function handleSave() {
+    const sessionChanged  = settings.session  !== origSession
+    const semesterChanged = settings.semester !== origSemester
+    if ((sessionChanged || semesterChanged) && (origSession || origSemester)) {
+      setShowArchivePrompt(true)
+      return
+    }
+    await doSave()
+  }
+
+  async function doSave() {
+    setShowArchivePrompt(false)
     setSaving(true)
     try {
       await updateSettings(settings)
+      localStorage.setItem('autoLogoutMinutes', settings.auto_logout || 'off')
+      setOrigSession(settings.session); setOrigSemester(settings.semester)
       toast('Settings saved successfully', 'success')
     } catch {
       toast('Failed to save settings', 'error')
@@ -509,8 +528,48 @@ ${courseHTML}
                 onChange={e => set('total_weeks', parseInt(e.target.value))} />
               <p style={{ margin: '0.4rem 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>Used to calculate weekly attendance reports (typically 15–16).</p>
             </div>
+            <div>
+              <label style={LBL}>Auto Logout</label>
+              <select style={INP} value={settings.auto_logout || 'off'} onChange={e => set('auto_logout', e.target.value)}>
+                <option value="off">Off</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">60 minutes</option>
+              </select>
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>Automatically log out inactive users after this period.</p>
+            </div>
           </div>
         </div>
+
+        {/* Archive prompt modal */}
+        {showArchivePrompt && (
+          <div style={{ position:'fixed', inset:0, zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)' }}>
+            <div style={{ width:'90vw', maxWidth:420, background:'#fff', borderRadius:18, boxShadow:'0 24px 80px rgba(0,0,0,0.2)', padding:'1.75rem 1.5rem', textAlign:'center' }}>
+              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(245,158,11,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" style={{width:24,height:24}}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+              </div>
+              <p style={{ margin:'0 0 0.35rem', fontWeight:800, fontSize:'0.97rem', color:'#0f172a' }}>Session / Semester Changed</p>
+              <p style={{ margin:'0 0 1.5rem', fontSize:'0.82rem', color:'#64748b', lineHeight:1.55 }}>
+                You're changing the academic session or semester. Would you like to <strong>archive the current session first</strong> before saving?
+              </p>
+              <div style={{ display:'flex', gap:'0.65rem', flexDirection:'column' }}>
+                <button
+                  onClick={async () => { await handleArchive(); await doSave() }}
+                  style={{ padding:'0.72rem', borderRadius:10, border:'none', background:'linear-gradient(135deg,#1F6F5F,#2FA084)', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:'pointer', fontFamily:'inherit' }}>
+                  Archive &amp; Save
+                </button>
+                <button onClick={doSave}
+                  style={{ padding:'0.72rem', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontWeight:600, fontSize:'0.85rem', cursor:'pointer', fontFamily:'inherit' }}>
+                  Save Without Archiving
+                </button>
+                <button onClick={() => setShowArchivePrompt(false)}
+                  style={{ padding:'0.5rem', background:'none', border:'none', fontSize:'0.78rem', color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Export Attendance Data */}
         <div style={CARD}>

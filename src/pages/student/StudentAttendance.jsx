@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Printer, CheckCircle, AlertTriangle, ChevronDown, Activity, BarChart2 } from 'lucide-react'
+import { Printer, CheckCircle, AlertTriangle, ChevronDown, Activity, BarChart2, AlertCircle } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
-import { getAttendanceSummary } from '@/services/studentService'
+import { getAttendanceSummary, submitAttendanceDispute, getMyDisputes } from '@/services/studentService'
 import { getCourses } from '@/services/courseService'
 import { useAuthStore } from '@/store/authStore'
 import { useLocation } from 'react-router-dom'
@@ -244,6 +244,11 @@ export default function StudentAttendance() {
   const [selected,  setSelected]  = useState('')
   const [student,   setStudent]   = useState(null)
   const [courseMap, setCourseMap] = useState({})
+  const [disputes,  setDisputes]  = useState([])
+  const [disputeModal, setDisputeModal] = useState(null) // { rec, courseCode }
+  const [disputeText,  setDisputeText]  = useState('')
+  const [submitting,   setSubmitting]   = useState(false)
+  const [submitDone,   setSubmitDone]   = useState(false)
 
   useEffect(() => {
     if (!matric) return
@@ -251,7 +256,8 @@ export default function StudentAttendance() {
       getAttendanceSummary(matric),
       supabase.from('students').select('level, option').eq('matric', matric).single(),
       getCourses(),
-    ]).then(([data, { data: sd }, courseList]) => {
+      getMyDisputes(matric),
+    ]).then(([data, { data: sd }, courseList, myDisputes]) => {
       const map = {}
       ;(courseList || []).forEach(c => { map[c.id] = c })
       setCourseMap(map)
@@ -260,8 +266,33 @@ export default function StudentAttendance() {
       const courses = groupByCourse(recs, map)
       if (courses.length) setSelected(courses[0].courseId)
       if (sd) setStudent(sd)
+      setDisputes(myDisputes || [])
     }).finally(() => setLoading(false))
   }, [matric])
+
+  async function handleSubmitDispute() {
+    if (!disputeModal || !disputeText.trim()) return
+    setSubmitting(true)
+    try {
+      await submitAttendanceDispute({
+        matric,
+        studentName:  studentName,
+        attendanceId: disputeModal.rec.id,
+        courseId:     disputeModal.rec.course_id,
+        courseCode:   disputeModal.courseCode,
+        week:         disputeModal.rec.week,
+        date:         disputeModal.rec.date,
+        description:  disputeText.trim(),
+      })
+      setSubmitDone(true)
+      setDisputes(prev => [...prev, { attendance_id: disputeModal.rec.id, status: 'pending' }])
+    } catch { /* silent */ }
+    finally { setSubmitting(false) }
+  }
+
+  function isDisputed(recId) {
+    return disputes.some(d => d.attendance_id === recId)
+  }
 
   const courses = groupByCourse(records, courseMap)
   const course  = courses.find(c => c.courseId === selected)
@@ -380,6 +411,30 @@ export default function StudentAttendance() {
                 <ThresholdBar pct={course.pct} />
               </div>
 
+              {/* Weekly heatmap */}
+              <div style={{ ...CARD, padding: '1rem 1.4rem' }}>
+                <p style={{ margin: '0 0 0.65rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Weekly Attendance</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {course.records.slice().sort((a, b) => (a.week||0) - (b.week||0)).map((rec, i) => {
+                    const present = rec.status === 'present' || rec.present
+                    return (
+                      <div key={i} title={`Week ${rec.week} · ${rec.date || ''} · ${present ? 'Present' : 'Absent'}`}
+                        style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, background: present ? '#dcfce7' : '#fee2e2', color: present ? '#16a34a' : '#dc2626', cursor: 'default', userSelect: 'none' }}>
+                        {rec.week}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  <span style={{ fontSize: '0.65rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: '#dcfce7', display: 'inline-block' }} /> Present
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: '#fee2e2', display: 'inline-block' }} /> Absent
+                  </span>
+                </div>
+              </div>
+
               {/* Records table */}
               <div style={{ ...CARD, padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1rem 1.4rem', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
@@ -387,24 +442,34 @@ export default function StudentAttendance() {
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead><tr>{['Date','Week','Semester','Status'].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+                    <thead><tr>{['Date','Week','Semester','Status',''].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
                     <tbody>
-                      {course.records.map((rec, i) => (
-                        <tr key={i}>
-                          <td style={TD}>{rec.date || '—'}</td>
-                          <td style={TD}>Week {rec.week || '—'}</td>
-                          <td style={{ ...TD, color: '#9ca3af', fontSize: '0.75rem' }}>{rec.semester || '—'}</td>
-                          <td style={TD}>
-                            <span style={{
-                              fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.65rem', borderRadius: 99,
-                              background: rec.status==='present'?'#dcfce7':'#fee2e2',
-                              color:      rec.status==='present'?'#16a34a':'#dc2626',
-                            }}>
-                              {rec.status?.charAt(0).toUpperCase()+rec.status?.slice(1)||'—'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {course.records.map((rec, i) => {
+                        const present  = rec.status === 'present' || rec.present
+                        const disputed = isDisputed(rec.id)
+                        return (
+                          <tr key={i}>
+                            <td style={TD}>{rec.date || '—'}</td>
+                            <td style={TD}>Week {rec.week || '—'}</td>
+                            <td style={{ ...TD, color: '#9ca3af', fontSize: '0.75rem' }}>{rec.semester || '—'}</td>
+                            <td style={TD}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.65rem', borderRadius: 99, background: present ? '#dcfce7' : '#fee2e2', color: present ? '#16a34a' : '#dc2626' }}>
+                                {present ? 'Present' : 'Absent'}
+                              </span>
+                            </td>
+                            <td style={{ ...TD, textAlign: 'right' }}>
+                              {!present && (
+                                disputed
+                                  ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', padding: '2px 8px', borderRadius: 99 }}>Disputed</span>
+                                  : <button onClick={() => { setDisputeModal({ rec, courseCode: course.code }); setDisputeText(''); setSubmitDone(false) }}
+                                      style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6366f1', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)', padding: '2px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                      Dispute
+                                    </button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -470,6 +535,55 @@ export default function StudentAttendance() {
             <p style={{ padding: '0.6rem 1.4rem', fontSize: '0.72rem', color: '#9ca3af', borderTop: '1px solid rgba(0,0,0,0.05)', margin: 0 }}>
               Click any row to view detailed records for that course.
             </p>
+          </div>
+        </div>
+      )}
+      {/* Dispute modal */}
+      {disputeModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: 420, borderRadius: 18, background: '#fff', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', padding: '1.5rem' }}>
+            {submitDone ? (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.85rem' }}>
+                  <CheckCircle size={24} color="#16a34a" />
+                </div>
+                <p style={{ margin: '0 0 0.35rem', fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>Dispute Submitted</p>
+                <p style={{ margin: '0 0 1.25rem', fontSize: '0.82rem', color: '#64748b', lineHeight: 1.55 }}>Your dispute has been sent to your lecturer for review. You'll be notified via Telegram when a decision is made.</p>
+                <button onClick={() => setDisputeModal(null)}
+                  style={{ padding: '0.65rem 1.5rem', borderRadius: 10, border: 'none', background: '#2FA084', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.92rem', color: '#1e293b' }}>Dispute Attendance</p>
+                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{disputeModal.courseCode} · Week {disputeModal.rec.week} · {disputeModal.rec.date}</p>
+                  </div>
+                  <button onClick={() => setDisputeModal(null)} style={{ padding: 5, borderRadius: 7, border: 'none', background: '#f1f5f9', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                    <AlertCircle size={14} />
+                  </button>
+                </div>
+                <p style={{ margin: '0 0 0.65rem', fontSize: '0.8rem', color: '#475569', lineHeight: 1.55 }}>
+                  You were marked <strong style={{ color: '#dc2626' }}>Absent</strong> for this class. If you were present, describe the situation and your lecturer will review it.
+                </p>
+                <textarea value={disputeText} onChange={e => setDisputeText(e.target.value)}
+                  placeholder="Explain why you believe this record is incorrect…"
+                  rows={4}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: '0.82rem', fontFamily: 'inherit', color: '#1e293b', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: '0.85rem' }} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setDisputeModal(null)}
+                    style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancel
+                  </button>
+                  <button onClick={handleSubmitDispute} disabled={submitting || !disputeText.trim()}
+                    style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem', borderRadius: 10, border: 'none', background: submitting || !disputeText.trim() ? 'rgba(99,102,241,0.4)' : '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: submitting || !disputeText.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                    {submitting ? 'Submitting…' : 'Submit Dispute'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

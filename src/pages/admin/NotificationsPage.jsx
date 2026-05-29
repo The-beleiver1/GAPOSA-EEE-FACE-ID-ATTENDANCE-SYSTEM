@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { approveLecturer, rejectLecturer } from '@/services/authService'
 import { getPendingLecturers } from '@/services/courseService'
-import { notifyStudent } from '@/services/studentService'
+import { notifyStudent, logAudit } from '@/services/studentService'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
@@ -29,7 +29,11 @@ export default function NotificationsPage() {
   const [absenceRequests,   setAbsenceRequests]   = useState([])
   const [loading,    setLoading]   = useState(true)
   const [approving,  setApproving] = useState(null)
+  const [adminNotes, setAdminNotes] = useState({})
   const { toast } = useToast()
+
+  function getNote(id) { return adminNotes[id] || '' }
+  function setNote(id, val) { setAdminNotes(p => ({ ...p, [id]: val })) }
 
   async function load() {
     setLoading(true)
@@ -67,11 +71,13 @@ export default function NotificationsPage() {
 
   async function handleReenrollApprove(r) {
     setApproving(r.id)
+    const note = getNote(r.id)
     try {
       await supabase.from('face_descriptors').delete().eq('matric', r.matric)
       await supabase.from('students').update({ enrolled: false }).eq('matric', r.matric)
-      await supabase.from('reenroll_requests').update({ status: 'approved' }).eq('id', r.id)
+      await supabase.from('reenroll_requests').update({ status: 'approved', admin_note: note || null }).eq('id', r.id)
       setReenrollRequests(prev => prev.filter(x => x.id !== r.id))
+      logAudit(profile, 'approve_reenroll', 'reenroll_request', r.id, { matric: r.matric, name: r.student_name })
       toast(`Re-enrolment approved — ${r.student_name || r.matric}'s face data cleared`, 'success')
       notifyStudent(r.matric, {
         text:
@@ -79,6 +85,7 @@ export default function NotificationsPage() {
           `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
           `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
           `Your re-enrolment request has been <b>APPROVED</b>.\n\n` +
+          (note ? `Note from admin: ${note}\n\n` : '') +
           `Your face data has been cleared. Please re-enrol via the GAPOSA app:\n` +
           `<b>Profile → Re-enrollment</b>\n\n` +
           `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
@@ -106,9 +113,11 @@ export default function NotificationsPage() {
 
   async function handleAbsenceApprove(r) {
     setApproving(r.id)
+    const note = getNote(r.id)
     try {
-      await supabase.from('absence_requests').update({ status: 'approved' }).eq('id', r.id)
+      await supabase.from('absence_requests').update({ status: 'approved', admin_note: note || null }).eq('id', r.id)
       setAbsenceRequests(prev => prev.filter(x => x.id !== r.id))
+      logAudit(profile, 'approve_absence', 'absence_request', r.id, { matric: r.matric, name: r.student_name })
       toast(`Absence approved for ${r.student_name || r.matric} — notify the relevant lecturer(s)`, 'success')
       notifyStudent(r.matric, {
         text:
@@ -116,6 +125,7 @@ export default function NotificationsPage() {
           `&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;&#x2015;\n` +
           `Hello <b>${(r.student_name || r.matric).split(' ')[0]}</b>,\n\n` +
           `Your absence request has been <b>APPROVED</b>.\n\n` +
+          (note ? `Note: ${note}\n\n` : '') +
           `The concerned lecturers will be notified.\n\n` +
           `<i>EEE FACE-ID · Gateway ICT Polytechnic</i>`,
       }).catch(() => {})
@@ -243,6 +253,11 @@ export default function NotificationsPage() {
                             Approving clears this student's face data. They must re-enroll their face before attending any class.
                           </p>
                         </div>
+                        <textarea
+                          value={getNote(r.id)} onChange={e => setNote(r.id, e.target.value)}
+                          placeholder="Optional admin note (sent to student)…"
+                          rows={2}
+                          style={{ width:'100%', padding:'0.45rem 0.65rem', fontSize:'0.75rem', border:'1px solid #e2e8f0', borderRadius:8, resize:'vertical', fontFamily:'inherit', color:'#374151', marginBottom:'0.5rem', boxSizing:'border-box', outline:'none' }} />
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleReenrollApprove(r)} disabled={approving === r.id}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
@@ -301,6 +316,11 @@ export default function NotificationsPage() {
                             On approval — contact the relevant lecturer(s) for the missed class(es) on the dates listed above and request leniency for this student's attendance mark.
                           </p>
                         </div>
+                        <textarea
+                          value={getNote(r.id)} onChange={e => setNote(r.id, e.target.value)}
+                          placeholder="Optional admin note (sent to student)…"
+                          rows={2}
+                          style={{ width:'100%', padding:'0.45rem 0.65rem', fontSize:'0.75rem', border:'1px solid #e2e8f0', borderRadius:8, resize:'vertical', fontFamily:'inherit', color:'#374151', marginBottom:'0.5rem', boxSizing:'border-box', outline:'none' }} />
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleAbsenceApprove(r)} disabled={approving === r.id}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">

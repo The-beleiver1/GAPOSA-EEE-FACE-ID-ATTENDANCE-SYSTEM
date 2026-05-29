@@ -4,7 +4,7 @@ import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses } from '@/services/courseService'
-import { getEnrolledStudents } from '@/services/studentService'
+import { getEnrolledStudents, getStudentsTelegramStatus } from '@/services/studentService'
 import { Spinner } from '@/components/ui/Spinner'
 
 export default function LecturerStudentsPage() {
@@ -14,10 +14,14 @@ export default function LecturerStudentsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedLevel, setSelectedLevel] = useState('All')
+  const [tgStatus, setTgStatus] = useState({})
 
   useEffect(() => {
     Promise.all([getLecturerCourses(profile.id), getEnrolledStudents()])
-      .then(([c, s]) => { setCourses(c); setStudents(s) })
+      .then(([c, s]) => {
+        setCourses(c); setStudents(s)
+        getStudentsTelegramStatus(s.map(st => st.matric)).then(setTgStatus)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -87,7 +91,7 @@ export default function LecturerStudentsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['#', 'Name', 'Matric No.', 'Level', 'Option'].map(h => (
+                  {['#', 'Name', 'Matric No.', 'Level', 'Option', 'Telegram'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '0.7rem 1rem', fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #f1f5f9' }}>{h}</th>
                   ))}
                 </tr>
@@ -118,6 +122,12 @@ export default function LecturerStudentsPage() {
                       <span style={{ display: 'inline-block', padding: '0.22rem 0.6rem', borderRadius: 6, background: '#eff6ff', color: '#3b82f6', fontSize: '0.72rem', fontWeight: 700 }}>{s.level}</span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#64748b' }}>{s.option || '—'}</td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      {tgStatus[s.matric]
+                        ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#2FA084', background: 'rgba(47,160,132,0.1)', border: '1px solid rgba(47,160,132,0.22)', padding: '2px 8px', borderRadius: 99 }}>✓ Linked</span>
+                        : <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)', padding: '2px 8px', borderRadius: 99 }}>Not Linked</span>
+                      }
+                    </td>
                   </tr>
                 ))}
               </tbody>
