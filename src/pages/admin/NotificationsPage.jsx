@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { approveLecturer, rejectLecturer } from '@/services/authService'
 import { getPendingLecturers } from '@/services/courseService'
-import { notifyStudent, logAudit } from '@/services/studentService'
+import { notifyStudent, logAudit, excuseAttendanceDates } from '@/services/studentService'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
@@ -116,6 +116,7 @@ export default function NotificationsPage() {
     const note = getNote(r.id)
     try {
       await supabase.from('absence_requests').update({ status: 'approved', admin_note: note || null }).eq('id', r.id)
+      excuseAttendanceDates(r.matric, r.absence_dates).catch(() => {})
       setAbsenceRequests(prev => prev.filter(x => x.id !== r.id))
       logAudit(profile, 'approve_absence', 'absence_request', r.id, { matric: r.matric, name: r.student_name })
       toast(`Absence approved for ${r.student_name || r.matric} — notify the relevant lecturer(s)`, 'success')

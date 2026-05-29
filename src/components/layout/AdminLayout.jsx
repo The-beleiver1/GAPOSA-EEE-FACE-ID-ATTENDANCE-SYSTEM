@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
-  Menu, Bell, Moon, Sun, Layers, ShieldCheck, ClipboardList,
+  Menu, Bell, Moon, Sun, Layers, ShieldCheck, ClipboardList, TrendingUp,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/services/authService'
@@ -20,6 +20,7 @@ const NAV = [
   { to: '/admin/courses',      label: 'Courses',     Icon: Layers,          end: false },
   { to: '/admin/lecturers',    label: 'Lecturers',   Icon: GraduationCap,   end: false },
   { to: '/admin/eligibility',  label: 'Eligibility', Icon: ShieldCheck,     end: false },
+  { to: '/admin/hod',          label: 'HOD Report',  Icon: TrendingUp,      end: false },
   { to: '/admin/audit',        label: 'Audit Log',   Icon: ClipboardList,   end: false },
   { to: '/admin/settings',     label: 'Settings',    Icon: Settings,        end: false },
 ]

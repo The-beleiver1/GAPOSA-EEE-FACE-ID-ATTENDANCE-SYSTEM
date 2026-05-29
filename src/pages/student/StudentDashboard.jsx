@@ -181,6 +181,11 @@ export default function StudentDashboard() {
   const overallPct = summary?.percentage || 0
   const firstName  = name.split(' ').slice(0, 2).join(' ')
 
+  // Streak: consecutive most-recent sessions all present
+  const allRecs = (summary?.records || []).slice().sort((a, b) => new Date(b.timestamp||b.date) - new Date(a.timestamp||a.date))
+  let streak = 0
+  for (const r of allRecs) { if (r.status === 'present' || r.present) streak++; else break }
+
   const pctColor   = overallPct >= 75 ? '#6FCF97' : overallPct >= 50 ? '#fbbf24' : '#ff8080'
   const riskColor  = atRisk.length > 0 ? '#b91c1c' : '#166534'
   const riskIconBg = atRisk.length > 0 ? '#fee2e2' : '#dcfce7'
@@ -284,6 +289,24 @@ export default function StudentDashboard() {
             </div>
 
           </div>
+
+          {/* ── Streak card ── */}
+          {allRecs.length > 0 && (
+            <div style={{ background: streak >= 5 ? 'linear-gradient(135deg,#1F6F5F,#2FA084)' : '#fff', border: '1px solid #f1f5f9', borderRadius: 24, padding: '1.25rem 1.5rem', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: streak >= 5 ? 'rgba(255,255,255,0.15)' : 'rgba(47,160,132,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '1.75rem' }}>{streak >= 10 ? '🔥' : streak >= 5 ? '⭐' : streak >= 2 ? '✅' : '📋'}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, color: streak >= 5 ? 'rgba(255,255,255,0.7)' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Attendance Streak</p>
+                <p style={{ margin: '0.1rem 0 0', fontSize: '1.5rem', fontWeight: 900, color: streak >= 5 ? '#fff' : '#1F6F5F', lineHeight: 1 }}>
+                  {streak} <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>in a row</span>
+                </p>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.73rem', color: streak >= 5 ? 'rgba(255,255,255,0.75)' : '#64748b', lineHeight: 1.4 }}>
+                  {streak === 0 ? 'Attend your next class to start a streak' : streak >= 10 ? 'Outstanding! Keep it going!' : streak >= 5 ? 'Great consistency — aim for 100%!' : `Keep attending every class to grow your streak`}
+                </p>
+              </div>
+            </div>
+          )}
 
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { User, Send, CheckCircle, XCircle, Copy, Check } from 'lucide-react'
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
@@ -22,6 +22,8 @@ export default function StudentProfile() {
   const [student,       setStudent]       = useState(null)
   const [loading,       setLoading]       = useState(true)
   const [telegramLinked, setTelegramLinked] = useState(false)
+  const [qrDataUrl,     setQrDataUrl]     = useState('')
+  const qrGenerated = useRef(false)
 
   // Link flow state
   const [linkCode,       setLinkCode]       = useState(null)
@@ -43,6 +45,15 @@ export default function StudentProfile() {
   }, [matric])
 
   useEffect(() => { loadStudent() }, [loadStudent])
+
+  useEffect(() => {
+    if (!matric || qrGenerated.current) return
+    qrGenerated.current = true
+    import('qrcode').then(QRCode => {
+      QRCode.toDataURL(matric.toUpperCase(), { width: 200, margin: 1, color: { dark: '#1F6F5F', light: '#ffffff' } })
+        .then(setQrDataUrl)
+    }).catch(() => {})
+  }, [matric])
 
   async function handleGenerateCode() {
     setLinkLoading(true)
@@ -316,6 +327,29 @@ export default function StudentProfile() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* ── QR Code card ── */}
+        <div style={CARD}>
+          <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
+            Attendance QR Code
+          </h3>
+          <p style={{ margin: '0 0 0.85rem', fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.55 }}>
+            Show this to your lecturer when the face scanner is offline. It encodes your matric number.
+          </p>
+          {qrDataUrl ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ padding: 12, background: '#fff', border: '1.5px solid rgba(47,160,132,0.25)', borderRadius: 14, boxShadow: '0 2px 12px rgba(31,111,95,0.1)' }}>
+                <img src={qrDataUrl} alt={`QR code for ${matric}`} style={{ width: 160, height: 160, display: 'block' }} />
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', fontFamily: 'monospace', fontWeight: 700, color: '#2FA084', letterSpacing: '0.08em' }}>{matric}</p>
+            </div>
+          ) : (
+            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 20, height: 20, border: '2px solid #2FA084', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            </div>
+          )}
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
 
       </div>

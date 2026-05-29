@@ -91,6 +91,9 @@ export default function ScanPage() {
   const wrongLevelTimerRef     = useRef(null)
   const [scannedWeeks,         setScannedWeeks]    = useState(new Set())
   const [serverOnline,         setServerOnline]    = useState(null)
+  const [qrMode,               setQrMode]          = useState(false)
+  const [qrScanning,           setQrScanning]      = useState(false)
+  const qrLoopRef = useRef(null)
   const [scanStatus,           setScanStatus]      = useState('idle')
   const [alreadyMarked,        setAlreadyMarked]   = useState(null)
   const [wrongLevelStudent,    setWrongLevelStudent] = useState(null)
@@ -370,6 +373,49 @@ export default function ScanPage() {
     finally { setManualMarking(false) }
   }
 
+  function startQrMode() {
+    setQrMode(true); setQrScanning(true)
+    async function loop() {
+      if (!videoRef.current?.srcObject) { qrLoopRef.current = setTimeout(loop, 300); return }
+      try {
+        const jsQR = (await import('jsqr')).default
+        const canvas = document.createElement('canvas')
+        const v = videoRef.current
+        canvas.width = v.videoWidth || 640; canvas.height = v.videoHeight || 480
+        canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
+        const img = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
+        const code = jsQR(img.data, img.width, img.height)
+        if (code?.data) {
+          const matric = code.data.toUpperCase().trim()
+          const store = useScanStore.getState()
+          if (!store.isAlreadyScanned(matric)) {
+            const student = students.find(s => s.matric.toUpperCase() === matric)
+            if (student) {
+              await markAttendance({
+                matric: student.matric, name: student.name,
+                courseId: store.activeCourse?.id, week: store.activeWeek,
+                status: 'present', confidence: 100,
+                lecturerId: profile.id, semester: store.semester, session: store.session,
+              })
+              store.markPresent(student)
+              toast(`QR ✓ ${student.name} — present`, 'success')
+            } else {
+              toast(`QR scanned: ${matric} — not found in enrolled list`, 'error')
+            }
+            qrLoopRef.current = setTimeout(loop, 2000); return
+          }
+        }
+      } catch { /* silent */ }
+      qrLoopRef.current = setTimeout(loop, 300)
+    }
+    loop()
+  }
+
+  function stopQrMode() {
+    setQrMode(false); setQrScanning(false)
+    clearTimeout(qrLoopRef.current)
+  }
+
   async function dispatchAttendanceNotifications(presentList, absentList, course, week) {
     await dispatchTelegramNotifications(presentList, absentList, course, week, scan.semester, scan.session)
   }
@@ -516,6 +562,18 @@ export default function ScanPage() {
             </div>
           </div>
 
+          {/* QR mode banner */}
+          {qrMode && active && (
+            <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid rgba(47,160,132,0.35)', padding:'0.6rem 1rem', boxShadow:'0 2px 12px rgba(47,160,132,0.1)', display:'flex', alignItems:'center', gap:'0.8rem' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flex:1 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#2FA084', animation:'qrPulse 1s ease-in-out infinite' }}/>
+                <span style={{ fontSize:'0.72rem', fontWeight:800, color:'#1F6F5F' }}>QR Scan Mode — point camera at student QR code</span>
+              </div>
+              <button onClick={stopQrMode} style={{ padding:'4px 10px', borderRadius:7, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontWeight:700, fontSize:'0.7rem', cursor:'pointer', fontFamily:'inherit' }}>Exit QR Mode</button>
+            </div>
+          )}
+          <style>{`@keyframes qrPulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+
           {/* Manual entry fallback — shown when face server is offline */}
           {serverOnline === false && (
             <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid rgba(245,158,11,0.35)', padding:'0.75rem 1rem', boxShadow:'0 2px 12px rgba(245,158,11,0.08)', display:'flex', alignItems:'center', gap:'0.8rem', flexWrap:'wrap' }}>
@@ -581,12 +639,18 @@ export default function ScanPage() {
                       {serverOnline === null ? 'Checking…' : serverOnline ? 'AI Server' : 'Server Offline'}
                     </span>
                   </div>
-                  {serverOnline === false && (
+                  {serverOnline === false && (<>
                     <button onClick={async () => { setServerOnline(null); const ok = await checkFaceServer(); setServerOnline(ok) }}
                       style={{ background:'rgba(47,160,132,0.85)', border:'none', borderRadius:99, padding:'3px 10px', fontSize:'0.55rem', fontWeight:800, color:'#fff', cursor:'pointer', letterSpacing:'0.06em' }}>
                       RETRY
                     </button>
-                  )}
+                    {active && !qrMode && (
+                      <button onClick={startQrMode}
+                        style={{ background:'rgba(99,102,241,0.85)', border:'none', borderRadius:99, padding:'3px 10px', fontSize:'0.55rem', fontWeight:800, color:'#fff', cursor:'pointer', letterSpacing:'0.06em' }}>
+                        QR MODE
+                      </button>
+                    )}
+                  </>)}
                 </div>
 
                 {/* Confidence strip */}

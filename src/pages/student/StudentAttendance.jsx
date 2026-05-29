@@ -290,8 +290,8 @@ export default function StudentAttendance() {
     finally { setSubmitting(false) }
   }
 
-  function isDisputed(recId) {
-    return disputes.some(d => d.attendance_id === recId)
+  function getDisputeStatus(recId) {
+    return disputes.find(d => d.attendance_id === recId)?.status || null
   }
 
   const courses = groupByCourse(records, courseMap)
@@ -448,7 +448,7 @@ export default function StudentAttendance() {
                     <tbody>
                       {course.records.map((rec, i) => {
                         const present  = rec.status === 'present' || rec.present
-                        const disputed = isDisputed(rec.id)
+                        const ds       = getDisputeStatus(rec.id)
                         return (
                           <tr key={i}>
                             <td style={TD}>{rec.date || '—'}</td>
@@ -461,8 +461,12 @@ export default function StudentAttendance() {
                             </td>
                             <td style={{ ...TD, textAlign: 'right' }}>
                               {!present && (
-                                disputed
-                                  ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', padding: '2px 8px', borderRadius: 99 }}>Disputed</span>
+                                ds === 'approved'
+                                  ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: 99 }}>Corrected ✓</span>
+                                  : ds === 'rejected'
+                                  ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '2px 8px', borderRadius: 99 }}>Dispute Rejected</span>
+                                  : ds === 'pending'
+                                  ? <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', padding: '2px 8px', borderRadius: 99 }}>Under Review…</span>
                                   : <button onClick={() => { setDisputeModal({ rec, courseCode: course.code }); setDisputeText(''); setSubmitDone(false) }}
                                       style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6366f1', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)', padding: '2px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: 'inherit' }}>
                                       Dispute

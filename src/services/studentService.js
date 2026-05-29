@@ -843,6 +843,20 @@ export async function logAudit(userProfile, action, targetType, targetId, detail
   }).then(() => {}).catch(() => {})
 }
 
+// ── Excuse absence dates (called when admin approves absence request) ────────
+export async function excuseAttendanceDates(matric, dates) {
+  if (!dates?.length) return
+  const normalised = (Array.isArray(dates) ? dates : JSON.parse(dates)).map(d => String(d).trim())
+  for (const date of normalised) {
+    await supabase
+      .from('attendance')
+      .update({ status: 'present', present: true })
+      .ilike('matric', matric)
+      .eq('date', date)
+      .eq('status', 'absent')
+  }
+}
+
 export async function getAuditLogs(limit = 200) {
   const { data } = await supabase
     .from('audit_logs').select('*')

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses } from '@/services/courseService'
-import { getCourseAttendance, getEnrolledStudents, bulkMarkAttendance, getPendingDisputesForCourses, resolveDispute, notifyStudent } from '@/services/studentService'
+import { getCourseAttendance, getEnrolledStudents, bulkMarkAttendance, getPendingDisputesForCourses, resolveDispute, notifyStudent, updateAttendanceRecord } from '@/services/studentService'
 import { getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizeLevel, levelFromCourseCode } from '@/utils'
@@ -34,6 +34,7 @@ export default function AttendancePage() {
   const [importPreview,  setImportPreview]  = useState([])
   const [importing,      setImporting]      = useState(false)
   const [importErrors,   setImportErrors]   = useState([])
+  const [togglingId,     setTogglingId]     = useState(null)
 
   useEffect(() => {
     Promise.all([getLecturerCourses(profile.id), getEnrolledStudents(), getSettings()])
@@ -62,6 +63,18 @@ export default function AttendancePage() {
 
   function getRecord(matric) {
     return records.find(r => r.matric === matric)
+  }
+
+  async function handleToggleStatus(rec) {
+    if (!rec?.id) return
+    setTogglingId(rec.id)
+    const next = rec.status === 'present' ? 'absent' : 'present'
+    try {
+      await updateAttendanceRecord(rec.id, next)
+      setRecords(prev => prev.map(r => r.id === rec.id ? { ...r, status: next, present: next === 'present' } : r))
+      toast(`${rec.matric} marked ${next}`, 'success')
+    } catch { toast('Failed to update', 'error') }
+    finally { setTogglingId(null) }
   }
 
   async function handleResolveDispute(d, status) {
@@ -221,7 +234,15 @@ export default function AttendancePage() {
                     <td className="px-4 py-3 font-semibold text-gray-900">{s.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 font-mono">{s.matric}</td>
                     <td className="px-4 py-3">
-                      {rec ? <Badge status={rec.status} /> : <span className="text-xs text-gray-300">—</span>}
+                      {rec ? (
+                        <button
+                          onClick={() => handleToggleStatus(rec)}
+                          disabled={togglingId === rec.id}
+                          title="Click to toggle present / absent"
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', opacity: togglingId === rec.id ? 0.5 : 1 }}>
+                          <Badge status={rec.status} />
+                        </button>
+                      ) : <span className="text-xs text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {rec ? formatTime(rec.markedAt) : '—'}

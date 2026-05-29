@@ -327,6 +327,7 @@ export function EnrollVerify() {
 // ── STEP 3 ────────────────────────────────────────────────────────
 export function EnrollInstructions() {
   const {state}=useLocation();const navigate=useNavigate();const student=state?.student
+  const [consented, setConsented] = useState(false)
   if(!student){ navigate('/auth/enroll'); return null }
   const tips=[
     { color:'#2FA084', glow:'rgba(47,160,132,0.38)', iconBg:'rgba(47,160,132,0.15)',
@@ -388,6 +389,19 @@ export function EnrollInstructions() {
             {/* Divider */}
             <div style={{ margin:'0.75rem 1.3rem 0', height:'1px', background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)' }} />
 
+            {/* Biometric consent */}
+            <div style={{ margin:'0.85rem 1.3rem 0', padding:'0.85rem 1rem', borderRadius:14, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)' }}>
+              <label style={{ display:'flex', alignItems:'flex-start', gap:'0.65rem', cursor:'pointer' }}>
+                <div onClick={()=>setConsented(c=>!c)}
+                  style={{ width:18, height:18, borderRadius:5, border:`2px solid ${consented?'#2FA084':'rgba(255,255,255,0.35)'}`, background:consented?'#2FA084':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2, transition:'all 0.15s' }}>
+                  {consented && <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} style={{width:11,height:11}}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>}
+                </div>
+                <span style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.8)', lineHeight:1.55, fontFamily:"'Albert Sans',sans-serif" }}>
+                  I consent to my <strong style={{color:'#fff'}}>facial biometric data</strong> being captured and stored securely by Gateway ICT Polytechnic solely for attendance verification purposes, in accordance with departmental policy.
+                </span>
+              </label>
+            </div>
+
             {/* CTA — back pill (left) + start pill (right) */}
             <div style={{ padding:'1rem 1.5rem 2.2rem', display:'flex', justifyContent:'center', gap:'8rem' }}>
               {/* Back pill */}
@@ -405,8 +419,8 @@ export function EnrollInstructions() {
                 <span style={{ color:'rgba(255,255,255,0.7)', fontWeight:700, fontSize:'0.82rem', letterSpacing:'0.08em', fontFamily:"'Albert Sans',sans-serif" }}>BACK</span>
               </button>
               {/* Start pill */}
-              <button onClick={()=>navigate('/auth/enrollment',{state:{student}})}
-                style={{ padding:'0 1.4rem 0 1.1rem', height:46, borderRadius:'99px', border:'none', background:'linear-gradient(135deg,#2FA084,#1F6F5F)', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', cursor:'pointer', animation:'btnPulse 2s ease-in-out infinite', willChange:'transform', boxShadow:'0 4px 18px rgba(47,160,132,0.45)' }}>
+              <button onClick={()=>consented&&navigate('/auth/enrollment',{state:{student}})}
+                style={{ padding:'0 1.4rem 0 1.1rem', height:46, borderRadius:'99px', border:'none', background:consented?'linear-gradient(135deg,#2FA084,#1F6F5F)':'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', cursor:consented?'pointer':'not-allowed', animation:consented?'btnPulse 2s ease-in-out infinite':'none', willChange:'transform', boxShadow:consented?'0 4px 18px rgba(47,160,132,0.45)':'none', opacity:consented?1:0.5 }}>
                 <svg viewBox="0 0 24 24" fill="#fff" style={{width:21,height:21,flexShrink:0,marginLeft:'2px'}}>
                   <path d="M8 5.14v13.72a1 1 0 001.5.86l10-6.86a1 1 0 000-1.72l-10-6.86A1 1 0 008 5.14z"/>
                 </svg>
@@ -440,6 +454,8 @@ export function EnrollCamera() {
   const [actionMsg,setActionMsg]       = useState('')
   const [serverOnline,setServerOnline] = useState(true)
   const [duplicateError,setDuplicateError] = useState('')
+  const [multiAnglePhase, setMultiAnglePhase] = useState(0) // 0=done, 1=left, 2=right
+  const extraFramesRef = useRef([[]]) // [[left frames], [right frames]]
 
   const detectionTimer  = useRef(null)
   const stableCount     = useRef(0)
@@ -605,13 +621,27 @@ export function EnrollCamera() {
                 maybeSpeak(voices[LIVENESS_STEPS[next]?.id]||'Next step.',true)
                 setTimeout(()=>runDetectionLoop(),800)
               } else {
+                // Start multi-angle phase 1: turn left for extra descriptors
                 clearTimeout(detectionTimer.current)
-                phaseRef.current='done'
-                setCapturedPhoto(step1PhotoRef.current)
-                setPhase('done')
-                stopCamera()
-                maybeSpeak('All steps complete. Review your photo and submit.',true)
-                setTimeout(()=>setShowPreview(true),700)
+                setMultiAnglePhase(1)
+                maybeSpeak('Great! Now turn your head slightly to the LEFT for a moment.',true)
+                setTimeout(async () => {
+                  const leftFrames = await captureFrames(videoRef.current, 2).catch(()=>[])
+                  extraFramesRef.current[0] = leftFrames
+                  setMultiAnglePhase(2)
+                  maybeSpeak('Now turn slightly to the RIGHT.',true)
+                  setTimeout(async () => {
+                    const rightFrames = await captureFrames(videoRef.current, 2).catch(()=>[])
+                    extraFramesRef.current[1] = rightFrames
+                    setMultiAnglePhase(0)
+                    phaseRef.current='done'
+                    setCapturedPhoto(step1PhotoRef.current)
+                    setPhase('done')
+                    stopCamera()
+                    maybeSpeak('All steps complete. Review your photo and submit.',true)
+                    setTimeout(()=>setShowPreview(true),700)
+                  }, 2200)
+                }, 2200)
               }
             },500)
             return
@@ -654,11 +684,16 @@ export function EnrollCamera() {
         return
       }
 
-      // Step 2 — Reuse embedding from deduplicate response; fallback to separate call only if missing
+      // Step 2 — Get embeddings from all angles (front + left + right) for better matching
       setSubmitStatus('Saving enrollment…')
+      const allFrames = [
+        ...(step1FramesRef.current || []),
+        ...(extraFramesRef.current[0] || []),
+        ...(extraFramesRef.current[1] || []),
+      ].filter(Boolean)
       const embeddings = duplicate?.embedding
         ? [duplicate.embedding]
-        : await getEmbeddingsFromServer(step1FramesRef.current)
+        : await getEmbeddingsFromServer(allFrames.length ? allFrames : step1FramesRef.current)
 
       // Step 3 — Save to Supabase
       setSubmitStatus('Saving enrollment…')
@@ -851,6 +886,17 @@ export function EnrollCamera() {
                 <div style={{ position:'absolute', bottom:'0.65rem', left:'50%', transform:'translateX(-50%)', background:sc.bg, border:`1px solid ${sc.border}`, backdropFilter:'blur(20px)', borderRadius:99, padding:'0.3rem 0.9rem', display:'flex', alignItems:'center', gap:'0.4rem', whiteSpace:'nowrap' }}>
                   <div style={{ width:6, height:6, borderRadius:'50%', background:sc.dot, animation:liveStatus==='good'?'pulse 1.5s infinite':'none', flexShrink:0 }} />
                   <p style={{ color:sc.text, fontSize:'0.68rem', fontWeight:700, margin:0 }}>{liveMsg||stepRef.current?.instruction||'Position your face'}</p>
+                </div>
+              )}
+
+              {/* Multi-angle prompt overlay */}
+              {multiAnglePhase > 0 && (
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.4)', backdropFilter:'blur(4px)' }}>
+                  <div style={{ background:'rgba(31,111,95,0.9)', border:'1px solid rgba(111,207,151,0.4)', borderRadius:16, padding:'1rem 1.4rem', textAlign:'center' }}>
+                    <p style={{ margin:'0 0 0.2rem', fontSize:'1.5rem' }}>{multiAnglePhase===1?'⬅️':'➡️'}</p>
+                    <p style={{ margin:0, color:'#fff', fontWeight:700, fontSize:'0.82rem' }}>{multiAnglePhase===1?'Turn slightly LEFT':'Turn slightly RIGHT'}</p>
+                    <p style={{ margin:'0.2rem 0 0', color:'rgba(255,255,255,0.6)', fontSize:'0.7rem' }}>Hold for 2 seconds…</p>
+                  </div>
                 </div>
               )}
 
