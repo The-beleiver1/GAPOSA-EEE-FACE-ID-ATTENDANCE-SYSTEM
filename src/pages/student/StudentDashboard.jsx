@@ -195,8 +195,9 @@ export default function StudentDashboard() {
   const semesterPct = estimatedSemesterTotal > 0
     ? Math.min(Math.round((attendedClasses / estimatedSemesterTotal) * 100), 100)
     : 0
-  const riskColor  = atRisk.length > 0 ? '#b91c1c' : '#166534'
-  const riskIconBg = atRisk.length > 0 ? '#fee2e2' : '#dcfce7'
+  // No celebratory green when 0 at risk — use neutral brand teal so it never signals "you can rest"
+  const riskColor  = atRisk.length > 0 ? '#b91c1c' : '#2FA084'
+  const riskIconBg = atRisk.length > 0 ? '#fee2e2' : 'rgba(47,160,132,0.10)'
 
   return (
     <StudentLayout>
@@ -230,7 +231,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <svg width={124} height={124} viewBox="0 0 124 124"
-                style={{ display: 'block', flexShrink: 0, width: 'clamp(96px, 24vw, 130px)', height: 'clamp(96px, 24vw, 130px)' }}>
+                style={{ display: 'block', flexShrink: 0, width: 'clamp(112px, 28vw, 148px)', height: 'clamp(112px, 28vw, 148px)' }}>
                 {(() => { const R=46,C=2*Math.PI*R,dash=(semesterPct/100)*C; return (<>
                   <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={10}/>
                   <circle cx={62} cy={62} r={R} fill="none" stroke={pctColor} strokeWidth={10}
@@ -243,7 +244,7 @@ export default function StudentDashboard() {
                   {/* Attendance rate — clearly visible secondary label */}
                   <text x={62} y={69} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.92)" fontSize={12} fontWeight={700} fontFamily="inherit" letterSpacing="0.2">{overallPct}% rate</text>
                   {/* Class count — tertiary context */}
-                  <text x={62} y={81} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.65)" fontSize={10.5} fontWeight={600} fontFamily="inherit">{attendedClasses} of {totalClasses}</text>
+                  <text x={62} y={81} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.65)" fontSize={9} fontWeight={600} fontFamily="inherit" letterSpacing="0.1">{attendedClasses} of {totalClasses} classes</text>
                 </>)})()}
               </svg>
             </div>
@@ -278,10 +279,10 @@ export default function StudentDashboard() {
             {/* AT RISK */}
             <div onClick={() => navigate('/student/attendance', { state: { tab: 'all', filter: 'atrisk' } })}
               style={{ position: 'relative', overflow: 'hidden', background: '#fff', border: '1px solid #f1f5f9', borderRadius: 24, padding: '0 0 1.4rem', cursor: 'pointer', transition: 'transform 0.22s, box-shadow 0.22s', boxShadow: '0 2px 12px rgba(31,111,95,0.07)' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = atRisk.length > 0 ? '0 12px 40px rgba(185,28,28,0.14)' : '0 12px 40px rgba(22,101,52,0.14)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = atRisk.length > 0 ? '0 12px 40px rgba(185,28,28,0.14)' : '0 12px 40px rgba(31,111,95,0.10)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(31,111,95,0.07)' }}
             >
-              <div style={{ height: 4, background: atRisk.length > 0 ? 'linear-gradient(90deg,#b91c1c,#ef4444,#fca5a5)' : 'linear-gradient(90deg,#166534,#16a34a,#4ade80)', borderRadius: '24px 24px 0 0', marginBottom: '1.4rem' }} />
+              <div style={{ height: 4, background: atRisk.length > 0 ? 'linear-gradient(90deg,#b91c1c,#ef4444,#fca5a5)' : 'linear-gradient(90deg,#1F6F5F,#2FA084,#6FCF97)', borderRadius: '24px 24px 0 0', marginBottom: '1.4rem' }} />
               <div style={{ padding: '0 1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <p style={{ color: '#4b5563', fontSize: '0.72rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'inherit' }}>At Risk</p>

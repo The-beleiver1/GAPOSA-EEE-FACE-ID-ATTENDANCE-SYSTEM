@@ -86,10 +86,10 @@ export default function StudentNotifications() {
         } else {
           items.push({
             id: 'overall-ok',
-            type: 'success',
+            type: 'warning',
             icon: 'alert',
-            title: 'Attendance Threshold Met',
-            body: `Your overall attendance is ${overall}% — ${overall - 75}% above the required 75%. You remain eligible for examinations. Maintain this level throughout the semester; consistent absence can bring you below the threshold.`,
+            title: 'Keep Attending — Do Not Slow Down',
+            body: `Your attendance is currently ${overall}%. The 75% minimum applies to every class recorded — your rate updates downward with every absence. Past attendance does not protect you from missing future classes. Show up to every session.`,
           })
         }
 
