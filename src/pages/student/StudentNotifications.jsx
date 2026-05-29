@@ -33,7 +33,10 @@ const cfg = {
   danger:  { color: '#b91c1c', bg: '#fff1f2', border: '#b91c1c', Icon: AlertTriangle, iconColor: '#b91c1c' },
   warning: { color: '#92400e', bg: '#fffbeb', border: '#d97706', Icon: AlertTriangle, iconColor: '#d97706' },
   success: { color: '#166534', bg: '#f0fdf4', border: '#16a34a', Icon: CheckCircle,   iconColor: '#16a34a' },
+  info:    { color: '#075985', bg: '#f0f9ff', border: '#0ea5e9', Icon: Bell,           iconColor: '#0284c7' },
 }
+
+const MIN_SESSIONS = 5
 
 export default function StudentNotifications() {
   const { profile } = useAuthStore()
@@ -61,9 +64,18 @@ export default function StudentNotifications() {
           courseMap[cid].total++
           if (rec.status === 'present' || rec.present) courseMap[cid].present++
         }
-        const overall = s.percentage || 0
+        const overall       = s.percentage || 0
+        const totalSessions = s.total      || 0
 
-        if (overall < 75) {
+        if (totalSessions < MIN_SESSIONS) {
+          items.push({
+            id: 'semester-start',
+            type: 'info',
+            icon: 'alert',
+            title: 'Attendance Tracking Active',
+            body: `${totalSessions === 1 ? 'Your first class has been recorded.' : `${totalSessions} classes have been recorded so far.`} Your attendance is being tracked from the start of the semester. Eligibility for examinations requires a minimum of 75% attendance — attend every class consistently to build a strong record.`,
+          })
+        } else if (overall < 75) {
           items.push({
             id: 'overall',
             type: 'danger',
@@ -77,7 +89,7 @@ export default function StudentNotifications() {
             type: 'success',
             icon: 'alert',
             title: 'Attendance Threshold Met',
-            body: `Your overall attendance is ${overall}% — ${overall - 75}% above the required 75%. You are eligible to sit for examinations. Keep it up!`,
+            body: `Your overall attendance is ${overall}% — ${overall - 75}% above the required 75%. You remain eligible for examinations. Maintain this level throughout the semester; consistent absence can bring you below the threshold.`,
           })
         }
 

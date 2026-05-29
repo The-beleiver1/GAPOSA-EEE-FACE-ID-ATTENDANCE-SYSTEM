@@ -178,15 +178,19 @@ export default function StudentDashboard() {
   }
   const courses    = Object.entries(courseMap)
   const atRisk     = courses.filter(([, c]) => c.total > 0 && Math.round(c.present / c.total * 100) < 75)
-  const overallPct = summary?.percentage || 0
-  const firstName  = name.split(' ').slice(0, 2).join(' ')
+  const overallPct      = summary?.percentage || 0
+  const totalClasses    = summary?.total      || 0
+  const attendedClasses = summary?.attended   || 0
+  const firstName       = name.split(' ').slice(0, 2).join(' ')
 
   // Streak: consecutive most-recent sessions all present
   const allRecs = (summary?.records || []).slice().sort((a, b) => new Date(b.timestamp||b.date) - new Date(a.timestamp||a.date))
   let streak = 0
   for (const r of allRecs) { if (r.status === 'present' || r.present) streak++; else break }
 
-  const pctColor   = overallPct >= 75 ? '#6FCF97' : overallPct >= 50 ? '#fbbf24' : '#ff8080'
+  const pctColor  = overallPct >= 75 ? '#6FCF97' : overallPct >= 50 ? '#fbbf24' : '#ff8080'
+  // Suppress green/red judgment until there is enough data to be meaningful
+  const gaugeColor = totalClasses >= 5 ? pctColor : '#94a3b8'
   const riskColor  = atRisk.length > 0 ? '#b91c1c' : '#166534'
   const riskIconBg = atRisk.length > 0 ? '#fee2e2' : '#dcfce7'
 
@@ -225,11 +229,11 @@ export default function StudentDashboard() {
                 style={{ display: 'block', flexShrink: 0, width: 'clamp(86px, 22vw, 124px)', height: 'clamp(86px, 22vw, 124px)' }}>
                 {(() => { const R=46,C=2*Math.PI*R,dash=(Math.min(overallPct,100)/100)*C; return (<>
                   <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10}/>
-                  <circle cx={62} cy={62} r={R} fill="none" stroke={pctColor} strokeWidth={10}
+                  <circle cx={62} cy={62} r={R} fill="none" stroke={gaugeColor} strokeWidth={10}
                     strokeDasharray={`${dash} ${C}`} strokeLinecap="round" transform="rotate(-90 62 62)"
-                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${pctColor}88)`}}/>
-                  <text x={62} y={57} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={26} fontWeight={900} fontFamily="inherit">{overallPct}%</text>
-                  <text x={62} y={76} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.45)" fontSize={8} fontWeight={600} fontFamily="inherit" letterSpacing="2">ATTENDANCE</text>
+                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${gaugeColor}88)`}}/>
+                  <text x={62} y={53} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={24} fontWeight={900} fontFamily="inherit">{overallPct}%</text>
+                  <text x={62} y={72} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.5)" fontSize={8} fontWeight={600} fontFamily="inherit">{attendedClasses}/{totalClasses} classes</text>
                 </>)})()}
               </svg>
             </div>
@@ -294,7 +298,7 @@ export default function StudentDashboard() {
           {allRecs.length > 0 && (
             <div style={{ background: streak >= 5 ? 'linear-gradient(135deg,#1F6F5F,#2FA084)' : '#fff', border: '1px solid #f1f5f9', borderRadius: 24, padding: '1.25rem 1.5rem', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ width: 56, height: 56, borderRadius: 16, background: streak >= 5 ? 'rgba(255,255,255,0.15)' : 'rgba(47,160,132,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '1.75rem' }}>{streak >= 10 ? '🔥' : streak >= 5 ? '⭐' : streak >= 2 ? '✅' : '📋'}</span>
+                <span style={{ fontSize: '1.75rem' }}>{streak >= 10 ? '🔥' : streak >= 5 ? '⭐' : streak >= 2 ? '✅' : streak >= 1 ? '🎯' : '📋'}</span>
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, color: streak >= 5 ? 'rgba(255,255,255,0.7)' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Attendance Streak</p>
@@ -302,7 +306,7 @@ export default function StudentDashboard() {
                   {streak} <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>in a row</span>
                 </p>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.73rem', color: streak >= 5 ? 'rgba(255,255,255,0.75)' : '#64748b', lineHeight: 1.4 }}>
-                  {streak === 0 ? 'Attend your next class to start a streak' : streak >= 10 ? 'Outstanding! Keep it going!' : streak >= 5 ? 'Great consistency — aim for 100%!' : `Keep attending every class to grow your streak`}
+                  {streak === 0 ? 'Attend your next class to start a streak' : streak === 1 ? 'Great start! Attend your next class to keep the momentum.' : streak >= 10 ? 'Outstanding! Keep it going!' : streak >= 5 ? 'Great consistency — keep attending every class!' : 'Keep attending every class to grow your streak'}
                 </p>
               </div>
             </div>
