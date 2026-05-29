@@ -100,8 +100,8 @@ function studentMeta(studentName, matric, student) {
 }
 
 function ThresholdBar({ pct }) {
-  const color = pct >= 90 ? '#16a34a' : pct >= 75 ? '#d97706' : '#dc2626'
-  const label = pct >= 90 ? 'Excellent — keep it up!' : pct >= 75 ? 'Minimum met — keep attending every class' : 'Below minimum — you must not miss any more classes'
+  const color = pct >= 90 ? '#2FA084' : pct >= 75 ? '#d97706' : '#dc2626'
+  const label = pct >= 90 ? 'Keep every class streak going' : pct >= 75 ? 'Attend every class without exception' : 'At risk — do not miss any more classes'
   return (
     <div style={{ marginTop: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.35rem' }}>
@@ -393,10 +393,10 @@ export default function StudentAttendance() {
                     <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: '0.15rem 0 0', fontFamily: "'Albert Sans', sans-serif" }}>{course.total} class{course.total !== 1 ? 'es' : ''} recorded</p>
                   </div>
                   {course.pct >= 90
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.25rem 0.75rem', borderRadius: 99 }}><CheckCircle size={12} /> Excellent</span>
+                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#2FA084', background: 'rgba(47,160,132,0.10)', padding: '0.25rem 0.75rem', borderRadius: 99 }}><CheckCircle size={12} /> Consistent</span>
                     : course.pct >= 75
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> Needs Improvement</span>
-                    : <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> Critical</span>}
+                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> Keep Attending</span>
+                    : <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> At Risk</span>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.75rem', marginBottom: '0.25rem' }}>
@@ -488,9 +488,9 @@ export default function StudentAttendance() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.85rem' }}>
             {[
-              { label: 'Total Courses',  val: courses.length,                                                              color: '#2563eb', bg: '#dbeafe' },
-              { label: 'Excellent ≥90%', val: courses.filter(c => c.pct >= 90).length,                                    color: '#16a34a', bg: '#dcfce7' },
-              { label: 'Need Attention', val: courses.filter(c => c.total > 0 && c.pct < 90).length,                      color: '#dc2626', bg: '#fee2e2' },
+              { label: 'Total Courses', val: courses.length,                                               color: '#475569', bg: '#f1f5f9' },
+              { label: 'At Risk',       val: courses.filter(c => c.total > 0 && !c.eligible).length,       color: '#dc2626', bg: '#fee2e2' },
+              { label: 'Keep Attending',val: courses.filter(c => c.eligible).length,                       color: '#d97706', bg: '#fef9c3' },
             ].map(({ label, val, color, bg }) => (
               <div key={label} style={{ ...CARD, textAlign: 'center', padding: '1.25rem 0.75rem' }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: bg, margin: '0 auto 0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -503,21 +503,16 @@ export default function StudentAttendance() {
           </div>
 
           <div style={{ ...CARD, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '1rem 1.4rem', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '1rem 1.4rem', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
               <p style={{ color: '#1f2937', fontWeight: 700, fontSize: '0.88rem', margin: 0, fontFamily: "'Albert Sans', sans-serif", letterSpacing: '0.03em' }}>
-                {navState.filter === 'atrisk' ? 'At Risk Courses' : 'All Courses Summary'}
+                All Courses Summary
               </p>
-              {navState.filter === 'atrisk' && (
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.65rem', borderRadius: 99 }}>
-                  Below 75% only
-                </span>
-              )}
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr>{['Course','Total','Present','Absent','%','Status'].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(navState.filter === 'atrisk' ? courses.filter(c => !c.eligible) : courses).map(c => (
+                  {courses.map(c => (
                     <tr key={c.courseId} style={{ cursor: 'pointer', transition: 'background 0.12s' }}
                       onClick={() => { setSelected(c.courseId); setTab('course') }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
@@ -527,13 +522,13 @@ export default function StudentAttendance() {
                       <td style={TD}>{c.total}</td>
                       <td style={{ ...TD, color: '#16a34a', fontWeight: 600 }}>{c.present}</td>
                       <td style={{ ...TD, color: '#dc2626', fontWeight: 600 }}>{c.absent}</td>
-                      <td style={{ ...TD, fontWeight: 800, color: c.pct>=75?'#16a34a':c.pct>=50?'#d97706':'#dc2626' }}>{c.pct}%</td>
+                      <td style={{ ...TD, fontWeight: 800, color: c.pct>=75?'#d97706':'#dc2626' }}>{c.pct}%</td>
                       <td style={TD}>
                         {c.pct >= 90
-                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.18rem 0.6rem', borderRadius: 99 }}><CheckCircle size={10} /> Excellent</span>
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#2FA084', background: 'rgba(47,160,132,0.10)', padding: '0.18rem 0.6rem', borderRadius: 99 }}><CheckCircle size={10} /> Consistent</span>
                           : c.pct >= 75
-                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> Improve</span>
-                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> Critical</span>}
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> Keep Attending</span>
+                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> At Risk</span>}
                       </td>
                     </tr>
                   ))}
