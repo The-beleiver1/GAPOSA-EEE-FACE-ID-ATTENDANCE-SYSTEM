@@ -611,7 +611,7 @@ export default function StudentAttendance() {
             </>
           )}
         </div>
-      ) : (
+      ) : tab === 'all' ? (
         /* All courses */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.85rem' }}>
