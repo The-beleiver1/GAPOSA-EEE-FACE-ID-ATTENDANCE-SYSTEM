@@ -439,19 +439,21 @@ export default function StudentAttendance() {
         </div>
       </div>
 
-      {/* ── Tab switcher + Print (always visible) ── */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.4rem' }}>
-        <div style={{ flex: 1, display: 'flex', gap: 5, background: '#e8edf0', border: '1px solid #e2e8f0', borderRadius: 16, padding: 5 }}>
-          {[{ id: 'course', label: 'By Course' }, { id: 'all', label: 'All Courses' }, { id: 'history', label: 'History' }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              flex: 1, padding: '0.58rem', borderRadius: 12, border: 'none', cursor: 'pointer',
-              fontSize: '0.85rem', fontWeight: 700, transition: 'all 0.2s', fontFamily: 'inherit',
-              background: tab === t.id ? '#1F6F5F' : 'transparent',
-              color:      tab === t.id ? '#fff' : '#94a3b8',
-              boxShadow:  tab === t.id ? '0 2px 10px rgba(31,111,95,0.25)' : 'none',
-            }}>{t.label}</button>
-          ))}
-        </div>
+      {/* ── Tab switcher ── */}
+      <div style={{ display: 'flex', gap: 5, background: '#e8edf0', border: '1px solid #e2e8f0', borderRadius: 16, padding: 5, marginBottom: '0.75rem' }}>
+        {[{ id: 'course', label: 'By Course' }, { id: 'all', label: 'All Courses' }, { id: 'history', label: 'History' }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, padding: '0.58rem', borderRadius: 12, border: 'none', cursor: 'pointer',
+            fontSize: '0.85rem', fontWeight: 700, transition: 'all 0.2s', fontFamily: 'inherit',
+            background: tab === t.id ? '#1F6F5F' : 'transparent',
+            color:      tab === t.id ? '#fff' : '#94a3b8',
+            boxShadow:  tab === t.id ? '0 2px 10px rgba(31,111,95,0.25)' : 'none',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* ── Action buttons row ── */}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.4rem', justifyContent: 'flex-end' }}>
         <button
           disabled={certPrinting || !hasData}
           onClick={async () => {
@@ -459,11 +461,11 @@ export default function StudentAttendance() {
             try { openPrint(await buildAttendanceCertificate(courses, studentName, matric, student, settings), 'attendance-certificate.html') }
             finally { setCertPrinting(false) }
           }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.62rem 1.1rem', borderRadius: 13, border: 'none', cursor: certPrinting || !hasData ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 700, fontFamily: 'inherit', background: certPrinting || !hasData ? '#94a3b8' : '#6366f1', color: '#fff', boxShadow: '0 2px 10px rgba(99,102,241,0.28)', transition: 'all 0.2s', flexShrink: 0 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.55rem 1rem', borderRadius: 11, border: 'none', cursor: certPrinting || !hasData ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', background: certPrinting || !hasData ? '#94a3b8' : '#6366f1', color: '#fff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)', transition: 'all 0.2s' }}
           onMouseEnter={e => { if (!certPrinting && hasData) e.currentTarget.style.background = '#4f46e5' }}
           onMouseLeave={e => { if (!certPrinting && hasData) e.currentTarget.style.background = '#6366f1' }}
         >
-          {certPrinting ? <Spinner size={15} color="white" /> : <FileText size={15} />} Certificate
+          {certPrinting ? <Spinner size={14} color="white" /> : <FileText size={14} />} Certificate
         </button>
         <button
           onClick={async () => {
@@ -471,17 +473,11 @@ export default function StudentAttendance() {
             if (tab === 'course' && course) openPrint(await buildPrintCourse(course, studentName, matric, student))
             else if (tab === 'all') openPrint(await buildPrintAll(courses, studentName, matric, student))
           }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '0.62rem 1.1rem',
-            borderRadius: 13, border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, fontFamily: 'inherit',
-            background: '#2FA084',
-            color: '#fff',
-            boxShadow: '0 2px 10px rgba(47,160,132,0.30)', transition: 'all 0.2s', flexShrink: 0,
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.55rem 1rem', borderRadius: 11, border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', background: '#2FA084', color: '#fff', boxShadow: '0 2px 8px rgba(47,160,132,0.25)', transition: 'all 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.background = '#1F6F5F'}
           onMouseLeave={e => e.currentTarget.style.background = '#2FA084'}
         >
-          <Printer size={15} /> Print
+          <Printer size={14} /> Print
         </button>
       </div>
 
