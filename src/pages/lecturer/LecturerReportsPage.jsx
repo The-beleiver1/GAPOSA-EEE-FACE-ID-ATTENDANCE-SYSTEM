@@ -203,7 +203,17 @@ export default function LecturerReportsPage() {
   const totalRecords = records.length
   const overallRate  = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0
 
-  const studentSummary = courseStudents.map(s => {
+  // Supplement enrolled students with anyone who has attendance records but
+  // may have enrolled=false (e.g. after a re-enroll reset)
+  const extraMatrics = [...new Set(records.map(r => r.matric))]
+    .filter(m => !courseStudents.find(s => s.matric === m))
+  const extraStudents = extraMatrics.map(m => {
+    const rec = records.find(r => r.matric === m)
+    return { matric: m, name: rec?.name || rec?.student_name || m, level: effectiveCourseLevel || '', option: '' }
+  })
+  const allCourseStudents = [...courseStudents, ...extraStudents]
+
+  const studentSummary = allCourseStudents.map(s => {
     const sr = records.filter(r => r.matric === s.matric)
     const presentCount = sr.filter(r => r.status === 'present' || r.present).length
     return { ...s, presentCount, total: sr.length, rate: sr.length > 0 ? Math.round((presentCount / sr.length) * 100) : null }
@@ -395,7 +405,7 @@ export default function LecturerReportsPage() {
                                 {s.records.map((r, i) => (
                                   <tr key={i} style={{ borderTop: '1px solid #f8fafc' }}>
                                     <td style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem', color: '#6b7280', fontFamily: 'monospace' }}>{r.matric}</td>
-                                    <td style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e293b' }}>{r.student_name || '—'}</td>
+                                    <td style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e293b' }}>{r.name || r.student_name || '—'}</td>
                                     <td style={{ padding: '0.45rem 0.85rem' }}>
                                       <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.18rem 0.6rem', borderRadius: 99, background: (r.status === 'present' || r.present) ? '#dcfce7' : '#fee2e2', color: (r.status === 'present' || r.present) ? '#16a34a' : '#dc2626' }}>
                                         {(r.status === 'present' || r.present) ? 'Present' : 'Absent'}

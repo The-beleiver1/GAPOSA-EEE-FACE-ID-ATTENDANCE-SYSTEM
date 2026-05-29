@@ -164,6 +164,64 @@ export default function MasterListPage() {
         </div>
       </div>
 
+      {/* Format guide */}
+      <div style={{ background: '#f0fdf4', border: '1.5px solid rgba(47,160,132,0.3)', borderRadius: 14, padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.65rem' }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(47,160,132,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <BookOpen size={14} color="#2FA084" />
+          </div>
+          <p style={{ margin: 0, fontWeight: 800, fontSize: '0.85rem', color: '#1F6F5F' }}>Upload Format — Excel or CSV</p>
+        </div>
+        <p style={{ margin: '0 0 0.6rem', fontSize: '0.78rem', color: '#475569', lineHeight: 1.6 }}>
+          The file must have <strong>4 columns in this exact order</strong> — no header row required. Accepted formats: <code style={{ background: 'rgba(47,160,132,0.1)', padding: '1px 6px', borderRadius: 4, fontSize: '0.75rem' }}>.xlsx</code> <code style={{ background: 'rgba(47,160,132,0.1)', padding: '1px 6px', borderRadius: 4, fontSize: '0.75rem' }}>.xls</code> <code style={{ background: 'rgba(47,160,132,0.1)', padding: '1px 6px', borderRadius: 4, fontSize: '0.75rem' }}>.csv</code>
+        </p>
+        <div style={{ background: '#fff', borderRadius: 10, border: '1px solid rgba(47,160,132,0.2)', overflow: 'hidden', marginBottom: '0.6rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+            <thead>
+              <tr style={{ background: 'rgba(47,160,132,0.08)' }}>
+                {['Column A', 'Column B', 'Column C', 'Column D'].map((h, i) => (
+                  <th key={i} style={{ padding: '0.45rem 0.85rem', textAlign: 'left', fontWeight: 700, color: '#2FA084', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase', borderRight: i < 3 ? '1px solid rgba(47,160,132,0.15)' : 'none' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderTop: '1px solid rgba(47,160,132,0.15)' }}>
+                {['Matric Number', 'Full Name', 'Level', 'Option / Course'].map((h, i) => (
+                  <th key={i} style={{ padding: '0.4rem 0.85rem', textAlign: 'left', fontWeight: 600, color: '#64748b', fontSize: '0.72rem', borderRight: i < 3 ? '1px solid #f1f5f9' : 'none' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['EEE/HND/24/001', 'ADESANYA JOHN', 'HND 2', 'Electronics / Telecom'],
+                ['EEE/HND/24/002', 'IBRAHIM FATIMA', 'HND 2', 'Power / Machines'],
+                ['EEE/ND/24/010', 'OKAFOR CHIDI', 'ND 1', 'Electronics / Telecom'],
+              ].map((row, ri) => (
+                <tr key={ri} style={{ borderTop: '1px solid #f1f5f9' }}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} style={{ padding: '0.4rem 0.85rem', color: ri === 0 ? '#1e293b' : '#64748b', fontFamily: ci === 0 ? 'monospace' : 'inherit', fontSize: '0.75rem', borderRight: ci < 3 ? '1px solid #f1f5f9' : 'none' }}>{cell}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#475569' }}>Valid Level values</p>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {['ND 1', 'ND 2', 'HND 1', 'HND 2'].map(l => (
+                <code key={l} style={{ background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700 }}>{l}</code>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#475569' }}>Notes</p>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', lineHeight: 1.5 }}>Column D (Option) is optional. Duplicate matric numbers will be updated, not duplicated.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <div className="card flex items-center gap-4">

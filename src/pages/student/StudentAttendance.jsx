@@ -100,19 +100,19 @@ function studentMeta(studentName, matric, student) {
 }
 
 function ThresholdBar({ pct }) {
-  const color = pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626'
+  const color = pct >= 90 ? '#16a34a' : pct >= 75 ? '#d97706' : '#dc2626'
+  const label = pct >= 90 ? 'Excellent — keep it up!' : pct >= 75 ? 'Minimum met — keep attending every class' : 'Below minimum — you must not miss any more classes'
   return (
     <div style={{ marginTop: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.35rem' }}>
-        <span>Attendance progress</span><span>75% threshold</span>
+        <span>Attendance record</span><span>Target: 100%</span>
       </div>
       <div style={{ position: 'relative', height: 10, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 99, background: color, width: `${Math.min(pct,100)}%`, transition: 'width 0.6s ease' }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, width: 2, background: '#d1d5db', left: '75%' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.3rem' }}>
         <span style={{ fontWeight: 700, color }}>{pct}%</span>
-        <span style={{ color: '#9ca3af' }}>Need ≥ 75% to qualify</span>
+        <span style={{ color, fontWeight: 600 }}>{label}</span>
       </div>
     </div>
   )
@@ -134,7 +134,7 @@ async function buildPrintCourse(course, studentName, matric, student) {
     tr:nth-child(even) td{background:#f9fafb}
     .summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
     .badge{display:inline-block;padding:4px 14px;border-radius:99px;font-size:11px;font-weight:800}
-    .el{background:#dcfce7;color:#166534}.ar{background:#fee2e2;color:#991b1b}
+    .el{background:#dcfce7;color:#166534}.ar{background:#fee2e2;color:#991b1b}.warn{background:#fef9c3;color:#92400e}
     .stat{text-align:center}
     .stat-val{font-size:22px;font-weight:900;color:#1F6F5F;margin:0;line-height:1}
     .stat-lbl{font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.09em;margin:3px 0 0}
@@ -155,7 +155,7 @@ async function buildPrintCourse(course, studentName, matric, student) {
     <div class="divider"></div>
     <div class="stat"><p class="stat-val" style="color:${course.pct>=75?'#16a34a':course.pct>=50?'#d97706':'#dc2626'}">${course.pct}%</p><p class="stat-lbl">Attendance</p></div>
     <div class="divider"></div>
-    <div class="stat"><span class="badge ${course.eligible?'el':'ar'}">${course.eligible?'✓ Exam Eligible':'✗ At Risk'}</span></div>
+    <div class="stat"><span class="badge ${course.pct>=90?'el':course.pct>=75?'warn':'ar'}">${course.pct>=90?'Excellent':course.pct>=75?'Needs Improvement':'Critical'}</span></div>
   </div>
   <table>
     <thead><tr><th>Date</th><th>Week</th><th>Semester</th><th>Status</th></tr></thead>
@@ -170,15 +170,15 @@ async function buildPrintCourse(course, studentName, matric, student) {
 
 async function buildPrintAll(courses, studentName, matric, student) {
   const logoDataUrl = await getLogoDataUrl()
-  const eligible = courses.filter(c => c.eligible).length
-  const atRisk   = courses.filter(c => !c.eligible).length
+  const eligible = courses.filter(c => c.pct >= 90).length
+  const atRisk   = courses.filter(c => c.total > 0 && c.pct < 90).length
   const rows = courses.map(c => `<tr>
     <td><strong style="color:#1e3a5f">${c.code}</strong>${c.title ? `<br><span style="font-size:11px;color:#6b7280">${c.title}</span>` : ''}</td>
     <td style="text-align:center">${c.total}</td>
     <td style="text-align:center;color:#16a34a;font-weight:700">${c.present}</td>
     <td style="text-align:center;color:#dc2626;font-weight:700">${c.absent}</td>
     <td style="text-align:center;font-weight:800;color:${c.pct>=75?'#16a34a':c.pct>=50?'#d97706':'#dc2626'}">${c.pct}%</td>
-    <td><span style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:800;background:${c.eligible?'#dcfce7':'#fee2e2'};color:${c.eligible?'#166534':'#991b1b'}">${c.eligible?'✓ Eligible':'✗ At Risk'}</span></td>
+    <td><span style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:800;background:${c.pct>=90?'#dcfce7':c.pct>=75?'#fef9c3':'#fee2e2'};color:${c.pct>=90?'#166534':c.pct>=75?'#92400e':'#991b1b'}">${c.pct>=90?'Excellent':c.pct>=75?'Needs Improvement':'Critical'}</span></td>
   </tr>`).join('')
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Full Attendance Report</title>
   <style>
@@ -202,8 +202,8 @@ async function buildPrintAll(courses, studentName, matric, student) {
   ${studentMeta(studentName, matric, student)}
   <div class="overview">
     <div class="ov-cell"><p class="ov-val" style="color:#2563eb">${courses.length}</p><p class="ov-lbl">Total Courses</p></div>
-    <div class="ov-cell"><p class="ov-val" style="color:#16a34a">${eligible}</p><p class="ov-lbl">Exam Eligible</p></div>
-    <div class="ov-cell"><p class="ov-val" style="color:#dc2626">${atRisk}</p><p class="ov-lbl">At Risk</p></div>
+    <div class="ov-cell"><p class="ov-val" style="color:#16a34a">${eligible}</p><p class="ov-lbl">Excellent ≥90%</p></div>
+    <div class="ov-cell"><p class="ov-val" style="color:#dc2626">${atRisk}</p><p class="ov-lbl">Need Attention</p></div>
   </div>
   <table>
     <thead><tr><th>Course</th><th style="text-align:center">Total</th><th style="text-align:center">Present</th><th style="text-align:center">Absent</th><th style="text-align:center">Attendance</th><th>Status</th></tr></thead>
@@ -392,9 +392,11 @@ export default function StudentAttendance() {
                     <p style={{ color: '#1f2937', fontWeight: 800, fontSize: '1.1rem', margin: 0, fontFamily: "'Albert Sans', sans-serif", letterSpacing: '0.04em' }}>{course.label}</p>
                     <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: '0.15rem 0 0', fontFamily: "'Albert Sans', sans-serif" }}>{course.total} class{course.total !== 1 ? 'es' : ''} recorded</p>
                   </div>
-                  {course.eligible
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.25rem 0.75rem', borderRadius: 99 }}><CheckCircle size={12} /> Exam Eligible</span>
-                    : <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> At Risk</span>}
+                  {course.pct >= 90
+                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.25rem 0.75rem', borderRadius: 99 }}><CheckCircle size={12} /> Excellent</span>
+                    : course.pct >= 75
+                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> Needs Improvement</span>
+                    : <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: 99 }}><AlertTriangle size={12} /> Critical</span>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.75rem', marginBottom: '0.25rem' }}>
@@ -482,9 +484,9 @@ export default function StudentAttendance() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.85rem' }}>
             {[
-              { label: 'Total Courses', val: courses.length,                         color: '#2563eb', bg: '#dbeafe' },
-              { label: 'Eligible',      val: courses.filter(c => c.eligible).length,  color: '#16a34a', bg: '#dcfce7' },
-              { label: 'At Risk',       val: courses.filter(c => !c.eligible).length, color: '#dc2626', bg: '#fee2e2' },
+              { label: 'Total Courses',  val: courses.length,                                                              color: '#2563eb', bg: '#dbeafe' },
+              { label: 'Excellent ≥90%', val: courses.filter(c => c.pct >= 90).length,                                    color: '#16a34a', bg: '#dcfce7' },
+              { label: 'Need Attention', val: courses.filter(c => c.total > 0 && c.pct < 90).length,                      color: '#dc2626', bg: '#fee2e2' },
             ].map(({ label, val, color, bg }) => (
               <div key={label} style={{ ...CARD, textAlign: 'center', padding: '1.25rem 0.75rem' }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: bg, margin: '0 auto 0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -523,9 +525,11 @@ export default function StudentAttendance() {
                       <td style={{ ...TD, color: '#dc2626', fontWeight: 600 }}>{c.absent}</td>
                       <td style={{ ...TD, fontWeight: 800, color: c.pct>=75?'#16a34a':c.pct>=50?'#d97706':'#dc2626' }}>{c.pct}%</td>
                       <td style={TD}>
-                        {c.eligible
-                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.18rem 0.6rem', borderRadius: 99 }}><CheckCircle size={10} /> Eligible</span>
-                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> At Risk</span>}
+                        {c.pct >= 90
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '0.18rem 0.6rem', borderRadius: 99 }}><CheckCircle size={10} /> Excellent</span>
+                          : c.pct >= 75
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> Improve</span>
+                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.6rem', borderRadius: 99 }}><AlertTriangle size={10} /> Critical</span>}
                       </td>
                     </tr>
                   ))}
