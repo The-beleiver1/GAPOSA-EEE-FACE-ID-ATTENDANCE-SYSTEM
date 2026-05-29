@@ -99,10 +99,19 @@ export default function ScanPage() {
   const [wrongLevelStudent,    setWrongLevelStudent] = useState(null)
   const [manualMatric,         setManualMatric]    = useState('')
   const [manualMarking,        setManualMarking]   = useState(false)
+  const [offlineQueue,         setOfflineQueue]    = useState([])
 
   useEffect(() => {
     init()
     return () => { clearInterval(scanIntervalRef.current); stopCamera() }
+  }, [])
+
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('gaposa_offline_queue') || '[]')
+    if (stored.length) setOfflineQueue(stored)
+    const handler = () => flushOfflineQueue()
+    window.addEventListener('online', handler)
+    return () => window.removeEventListener('online', handler)
   }, [])
 
   useEffect(() => {
@@ -257,18 +266,46 @@ export default function ScanPage() {
     finally { processingRef.current = false }
   }
 
+  // ── Offline queue ────────────────────────────────────────────────
+  const QUEUE_KEY = 'gaposa_offline_queue'
+
+  async function saveAttendance(record) {
+    if (!navigator.onLine) {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+      q.push({ ...record, _ts: Date.now() })
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(q))
+      setOfflineQueue([...q])
+      return
+    }
+    await markAttendance(record)
+  }
+
+  async function flushOfflineQueue() {
+    const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+    if (!q.length) return
+    const failed = []
+    for (const item of q) {
+      const { _ts, ...rec } = item
+      try { await markAttendance(rec) } catch { failed.push(item) }
+    }
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(failed))
+    setOfflineQueue([...failed])
+    const n = q.length - failed.length
+    if (n > 0) toast(`${n} offline record${n > 1 ? 's' : ''} synced to server`, 'success')
+  }
+
   async function handleAutoAccept({ student, confidence }) {
     // Use getState() to get fresh store values — this runs inside an async callback
     const store = useScanStore.getState()
     try {
-      await markAttendance({
+      await saveAttendance({
         matric: student.matric, name: student.name,
         courseId: store.activeCourse?.id, week: store.activeWeek,
         status: 'present', confidence,
         lecturerId: profile.id, semester: store.semester, session: store.session,
       })
       store.markPresent(student)
-      toast(`✓ ${student.name} — present`, 'success')
+      toast(navigator.onLine ? `✓ ${student.name} — present` : `✓ ${student.name} — queued (offline)`, 'success')
     } catch { toast('Failed to save attendance', 'error') }
   }
 
@@ -283,7 +320,7 @@ export default function ScanPage() {
     const { student, confidence } = result
     clearTimeout(wrongLevelTimerRef.current)
     try {
-      await markAttendance({
+      await saveAttendance({
         matric: student.matric, name: student.name,
         courseId: scan.activeCourse?.id, week: scan.activeWeek,
         status: 'present', confidence,
@@ -299,7 +336,7 @@ export default function ScanPage() {
     if (!scan.pendingApproval) return
     const { student, confidence } = scan.pendingApproval
     try {
-      await markAttendance({
+      await saveAttendance({
         matric: student.matric, name: student.name,
         courseId: scan.activeCourse?.id, week: scan.activeWeek,
         status: 'present', confidence,
@@ -325,7 +362,7 @@ export default function ScanPage() {
       const course = scan.activeCourse
       const week = scan.activeWeek
       for (const s of absent) {
-        await markAttendance({
+        await saveAttendance({
           matric: s.matric, name: s.name,
           courseId: course?.id, week,
           status: 'absent', confidence: 0,
@@ -360,7 +397,7 @@ export default function ScanPage() {
     if (scan.isAlreadyScanned(student.matric)) { toast(`${student.name} already marked`, 'error'); return }
     setManualMarking(true)
     try {
-      await markAttendance({
+      await saveAttendance({
         matric: student.matric, name: student.name,
         courseId: scan.activeCourse.id, week: scan.activeWeek,
         status, confidence: 0,
@@ -391,7 +428,7 @@ export default function ScanPage() {
           if (!store.isAlreadyScanned(matric)) {
             const student = students.find(s => s.matric.toUpperCase() === matric)
             if (student) {
-              await markAttendance({
+              await saveAttendance({
                 matric: student.matric, name: student.name,
                 courseId: store.activeCourse?.id, week: store.activeWeek,
                 status: 'present', confidence: 100,
@@ -631,6 +668,15 @@ export default function ScanPage() {
                     {scan.scanning ? 'Processing' : active ? 'Live' : 'Offline'}
                   </span>
                 </div>
+                {/* Offline queue badge */}
+                {offlineQueue.length > 0 && (
+                  <div style={{ position:'absolute', top:10, left:10, display:'flex', alignItems:'center', gap:4, background:'rgba(217,119,6,0.92)', backdropFilter:'blur(8px)', borderRadius:99, padding:'3px 10px 3px 7px', border:'1px solid rgba(255,255,255,0.15)' }}>
+                    <div style={{ width:5, height:5, borderRadius:'50%', background:'#fef08a' }}/>
+                    <span style={{ fontSize:'0.55rem', fontWeight:800, color:'#fff', letterSpacing:'0.06em' }}>
+                      {offlineQueue.length} QUEUED — WILL SYNC ON RECONNECT
+                    </span>
+                  </div>
+                )}
                 {/* Server health badge */}
                 <div style={{ position:'absolute', top:10, right:10, display:'flex', alignItems:'center', gap:5 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:4, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', borderRadius:99, padding:'3px 8px 3px 6px', border:'1px solid rgba(255,255,255,0.08)' }}>

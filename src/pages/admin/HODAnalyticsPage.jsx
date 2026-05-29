@@ -1,11 +1,138 @@
 import { useState, useEffect, useMemo } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, FileText } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { getCourses, getLecturers, getSettings } from '@/services/courseService'
 import { getAllAttendanceWithDetails, getEnrolledStudents } from '@/services/studentService'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizeLevel, levelFromCourseCode } from '@/utils'
+import logoSrc from '@/assets/gaposa-logo.png'
+
+async function getLogoDataUrl() {
+  try {
+    const res = await fetch(logoSrc); const blob = await res.blob()
+    return new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(blob) })
+  } catch { return '' }
+}
+
+function openPrint(html, filename = 'digest.html') {
+  const printable = html.replace('</body>', `<script>window.onload=function(){window.print()}<\/script></body>`)
+  const blob = new Blob([printable], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const w = window.open(url, '_blank')
+  if (!w) { const a = document.createElement('a'); a.href = url; a.download = filename; a.click() }
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
+
+async function buildWeeklyDigest(stats, settings, attendance) {
+  const logo = await getLogoDataUrl()
+  const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Per-student overall attendance (all courses combined)
+  const sMap = {}
+  attendance.forEach(r => {
+    if (!sMap[r.matric]) sMap[r.matric] = { matric: r.matric, name: r.name || r.student_name || r.matric, present: 0, total: 0 }
+    sMap[r.matric].total++
+    if (r.status === 'present' || r.present) sMap[r.matric].present++
+  })
+  const atRisk = Object.values(sMap)
+    .map(s => ({ ...s, pct: s.total > 0 ? Math.round(s.present / s.total * 100) : 0 }))
+    .filter(s => s.total >= 3 && s.pct < 80)
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 20)
+
+  const worstCourses = stats.courseStats.filter(c => c.rate !== null).slice(0, 8)
+
+  const courseRows = worstCourses.map((c, i) => `<tr>
+    <td style="color:#6b7280;text-align:center">${i+1}</td>
+    <td><strong>${c.code}</strong>${c.title ? `<br><span style="font-size:10px;color:#9ca3af">${c.title}</span>` : ''}</td>
+    <td style="text-align:center;font-weight:800;color:${c.rate>=75?'#16a34a':c.rate>=50?'#d97706':'#dc2626'}">${c.rate}%</td>
+    <td style="text-align:center">${c.sessions}</td>
+    <td style="text-align:center">${c.enrolled}</td>
+    <td style="text-align:center"><span style="padding:2px 10px;border-radius:99px;font-size:10px;font-weight:800;
+      background:${c.rate>=75?'#dcfce7':c.rate>=50?'#fef9c3':'#fee2e2'};
+      color:${c.rate>=75?'#166534':c.rate>=50?'#92400e':'#991b1b'}">${c.rate>=75?'On Track':c.rate>=50?'Monitor':'Needs Action'}</span></td>
+  </tr>`).join('')
+
+  const riskRows = atRisk.map((s, i) => `<tr>
+    <td style="color:#6b7280;text-align:center">${i+1}</td>
+    <td style="font-weight:700">${s.name}</td>
+    <td style="font-family:monospace;font-size:10px;color:#6b7280">${s.matric}</td>
+    <td style="text-align:center">${s.present}</td>
+    <td style="text-align:center">${s.total}</td>
+    <td style="text-align:center;font-weight:800;color:${s.pct>=75?'#d97706':'#dc2626'}">${s.pct}%</td>
+    <td><div style="height:6px;background:#f1f5f9;border-radius:99px;min-width:60px">
+      <div style="height:100%;width:${s.pct}%;background:${s.pct>=75?'#d97706':'#dc2626'};border-radius:99px"></div>
+    </div></td>
+  </tr>`).join('')
+
+  const absentRows = stats.chronicAbsent.map((s, i) => {
+    const rate = Math.round(s.absent / s.total * 100)
+    return `<tr>
+      <td style="color:#6b7280;text-align:center">${i+1}</td>
+      <td style="font-weight:700">${s.name}</td>
+      <td style="font-family:monospace;font-size:10px;color:#6b7280">${s.matric}</td>
+      <td style="text-align:center">${s.total}</td>
+      <td style="text-align:center;color:#dc2626;font-weight:700">${s.absent}</td>
+      <td style="text-align:center;font-weight:800;color:#dc2626">${rate}%</td>
+    </tr>`
+  }).join('')
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>HOD Weekly Digest</title>
+  <style>
+    *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;padding:36px 44px;color:#111;font-size:12px}
+    h2{font-size:13px;font-weight:800;color:#1e293b;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    th{background:#1F6F5F;color:#fff;padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+    td{padding:7px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    tr:nth-child(even) td{background:#f9fafb}
+    .hdr{display:flex;align-items:center;gap:18px;padding-bottom:14px;margin-bottom:18px;border-bottom:3px solid #1F6F5F}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+    .kpi-cell{border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;text-align:center}
+    .kpi-val{font-size:22px;font-weight:900;margin:0;line-height:1}
+    .kpi-lbl{font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:3px 0 0}
+    .foot{margin-top:24px;font-size:10px;color:#9ca3af;border-top:2px solid #1F6F5F;padding-top:10px;display:flex;justify-content:space-between}
+    @media print{body{padding:24px 32px}}
+  </style></head><body>
+  <div class="hdr">
+    ${logo ? `<img src="${logo}" style="width:64px;height:64px;object-fit:contain" alt="Logo"/>` : ''}
+    <div>
+      <h1 style="margin:0;font-size:17px;font-weight:900;color:#1F6F5F;text-transform:uppercase">GATEWAY ICT POLYTECHNIC</h1>
+      <p style="margin:2px 0 0;font-size:10px;color:#6b7280">Saapade, Ogun State · Dept. of Electrical / Electronics Engineering</p>
+      <p style="margin:4px 0 0;font-size:12px;font-weight:800;color:#1e3a5f">HOD WEEKLY ATTENDANCE DIGEST</p>
+      <p style="margin:2px 0 0;font-size:10px;color:#2FA084">${settings.session || ''} · ${settings.semester || ''} · Generated ${date}</p>
+    </div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-cell"><p class="kpi-val" style="color:${stats.overallRate>=75?'#16a34a':'#dc2626'}">${stats.overallRate}%</p><p class="kpi-lbl">Overall Attendance</p></div>
+    <div class="kpi-cell"><p class="kpi-val" style="color:#2563eb">${stats.courseStats.length}</p><p class="kpi-lbl">Active Courses</p></div>
+    <div class="kpi-cell"><p class="kpi-val" style="color:#dc2626">${atRisk.length}</p><p class="kpi-lbl">Students at Risk</p></div>
+    <div class="kpi-cell"><p class="kpi-val" style="color:#dc2626">${stats.chronicAbsent.length}</p><p class="kpi-lbl">Chronic Absentees</p></div>
+  </div>
+
+  <h2>Course Attendance Ranking (worst first)</h2>
+  ${worstCourses.length === 0 ? '<p style="color:#9ca3af;font-size:11px">No course data recorded yet.</p>' : `
+  <table><thead><tr><th>#</th><th>Course</th><th style="text-align:center">Attendance</th><th style="text-align:center">Sessions</th><th style="text-align:center">Enrolled</th><th style="text-align:center">Status</th></tr></thead>
+  <tbody>${courseRows}</tbody></table>`}
+
+  <h2>Students at Risk — Approaching Disqualification (below 80%)</h2>
+  ${atRisk.length === 0 ? '<p style="color:#9ca3af;font-size:11px">No students currently at risk. Maintain current attendance levels.</p>' : `
+  <table><thead><tr><th>#</th><th>Student</th><th>Matric</th><th style="text-align:center">Present</th><th style="text-align:center">Total</th><th style="text-align:center">Rate</th><th>Progress</th></tr></thead>
+  <tbody>${riskRows}</tbody></table>
+  <p style="font-size:10px;color:#9ca3af;margin:4px 0 0">Sorted by lowest attendance first. Immediate intervention recommended for students below 75%.</p>`}
+
+  <h2>Chronically Absent Students (absent ≥50% of recorded classes)</h2>
+  ${stats.chronicAbsent.length === 0 ? '<p style="color:#9ca3af;font-size:11px">No chronically absent students this period.</p>' : `
+  <table><thead><tr><th>#</th><th>Student</th><th>Matric</th><th style="text-align:center">Total</th><th style="text-align:center">Absent</th><th style="text-align:center">Absence Rate</th></tr></thead>
+  <tbody>${absentRows}</tbody></table>`}
+
+  <div class="foot">
+    <span>EEE FACE-ID Attendance System · Gateway ICT Polytechnic</span>
+    <span>Printed: ${date}</span>
+  </div>
+  </body></html>`
+}
 
 export default function HODAnalyticsPage() {
   const [loading,    setLoading]    = useState(true)
@@ -14,6 +141,7 @@ export default function HODAnalyticsPage() {
   const [students,   setStudents]   = useState([])
   const [lecturers,  setLecturers]  = useState([])
   const [settings,   setSettings]   = useState({})
+  const [printing,   setPrinting]   = useState(false)
 
   useEffect(() => {
     Promise.all([getAllAttendanceWithDetails(), getCourses(), getEnrolledStudents(), getLecturers(), getSettings()])
@@ -72,10 +200,23 @@ export default function HODAnalyticsPage() {
   return (
     <AdminLayout>
       <div style={{ maxWidth: 940, margin: '0 auto' }}>
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div style={{ marginBottom: '0.25rem' }}><AnimatedLabel text="HOD Analytics" Icon={TrendingUp} /></div>
-          <h1 style={{ margin: '0.2rem 0 0', color: '#1e293b', fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.15 }}>Department Analytics</h1>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>{settings.session} · {settings.semester}</p>
+        <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ marginBottom: '0.25rem' }}><AnimatedLabel text="HOD Analytics" Icon={TrendingUp} /></div>
+            <h1 style={{ margin: '0.2rem 0 0', color: '#1e293b', fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.15 }}>Department Analytics</h1>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>{settings.session} · {settings.semester}</p>
+          </div>
+          <button
+            disabled={printing || loading}
+            onClick={async () => {
+              setPrinting(true)
+              try { openPrint(await buildWeeklyDigest(stats, settings, attendance), 'hod-weekly-digest.html') }
+              finally { setPrinting(false) }
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.1rem', borderRadius: 10, border: 'none', background: printing || loading ? '#94a3b8' : '#1F6F5F', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: printing || loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            {printing ? <Spinner size={13} color="white" /> : <FileText size={13} />}
+            {printing ? 'Preparing…' : 'Weekly Digest'}
+          </button>
         </div>
 
         {loading ? (

@@ -3,7 +3,7 @@ import { ShieldCheck, Printer, Download } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { getCourses, getSettings } from '@/services/courseService'
-import { getCourseAttendance, getEnrolledStudents } from '@/services/studentService'
+import { getCourseAttendance, getEnrolledStudents, getAllAttendanceWithDetails } from '@/services/studentService'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizeLevel, levelFromCourseCode } from '@/utils'
 import logoSrc from '@/assets/gaposa-logo.png'
@@ -109,6 +109,110 @@ async function printEligibility(course, rows, settings) {
   setTimeout(() => URL.revokeObjectURL(url), 30000)
 }
 
+async function buildFullBarringList(courses, students, settings) {
+  const logo    = await getLogoDataUrl()
+  const allRecs = await getAllAttendanceWithDetails()
+  const date    = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Per-student, per-course stats
+  const matrix = {} // matrix[matric][courseId] = { present, total }
+  allRecs.forEach(r => {
+    if (!matrix[r.matric]) matrix[r.matric] = {}
+    if (!matrix[r.matric][r.course_id]) matrix[r.matric][r.course_id] = { present: 0, total: 0 }
+    matrix[r.matric][r.course_id].total++
+    if (r.status === 'present' || r.present) matrix[r.matric][r.course_id].present++
+  })
+
+  // For each student find barred courses
+  const barredStudents = students.map(s => {
+    const barredCourses = courses.filter(c => {
+      const m = matrix[s.matric]?.[c.id]
+      if (!m || m.total === 0) return false
+      return Math.round(m.present / m.total * 100) < 75
+    }).map(c => {
+      const m = matrix[s.matric][c.id]
+      const pct = Math.round(m.present / m.total * 100)
+      return { code: c.code, title: c.title, present: m.present, total: m.total, pct }
+    })
+    return { ...s, barredCourses }
+  }).filter(s => s.barredCourses.length > 0)
+    .sort((a, b) => b.barredCourses.length - a.barredCourses.length)
+
+  const tableRows = barredStudents.map((s, i) => `
+    <tr>
+      <td style="text-align:center;color:#9ca3af">${i+1}</td>
+      <td style="font-family:monospace;font-size:10px">${s.matric}</td>
+      <td style="font-weight:700">${s.name}</td>
+      <td>${s.level || '—'}</td>
+      <td>${s.barredCourses.map(c =>
+        `<span style="display:inline-block;margin:1px 2px;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;background:#fee2e2;color:#991b1b">${c.code}: ${c.pct}%</span>`
+      ).join('')}</td>
+      <td style="text-align:center;font-weight:800;color:#dc2626">${s.barredCourses.length}</td>
+    </tr>`).join('')
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Exam Barring List</title>
+  <style>
+    *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;padding:36px 44px;color:#111;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th{background:#b91c1c;color:#fff;padding:9px 12px;text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase}
+    td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    tr:nth-child(even) td{background:#fafafa}
+    .hdr{display:flex;align-items:center;gap:20px;padding-bottom:16px;margin-bottom:20px;border-bottom:3px solid #b91c1c}
+    .summary{display:flex;gap:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:16px}
+    .sum-cell{flex:1;padding:12px 16px;text-align:center;border-right:1px solid #e2e8f0}
+    .sum-cell:last-child{border-right:none}
+    .sum-val{font-size:22px;font-weight:900;margin:0;line-height:1}
+    .sum-lbl{font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin:3px 0 0}
+    .notice{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:#991b1b}
+    .foot{margin-top:28px;font-size:10px;color:#9ca3af;border-top:2px solid #b91c1c;padding-top:10px;display:flex;justify-content:space-between}
+    @media print{body{padding:24px 32px}}
+  </style></head><body>
+  <div class="hdr">
+    ${logo ? `<img src="${logo}" style="width:72px;height:72px;object-fit:contain" alt="Logo"/>` : ''}
+    <div>
+      <h1 style="margin:0;font-size:19px;font-weight:900;color:#b91c1c;text-transform:uppercase;letter-spacing:-.01em">GATEWAY ICT POLYTECHNIC</h1>
+      <p style="margin:2px 0 0;font-size:10px;color:#6b7280">Saapade, Ogun State, Nigeria</p>
+      <p style="margin:5px 0 0;font-size:11px;font-weight:800;color:#1e3a5f">Dept. of Electrical / Electronics Engineering</p>
+      <p style="margin:2px 0 0;font-size:10px;color:#b91c1c;font-weight:700">EXAMINATION BARRING LIST — ${settings.session || ''} ${settings.semester || ''}</p>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>OFFICIAL DOCUMENT — FOR EXAMINATION OFFICE USE ONLY.</strong>
+    The students listed below have fallen below the required attendance threshold in one or more courses.
+    They are <strong>NOT ELIGIBLE</strong> to sit for the examination in the affected course(s).
+    Generated: ${date}
+  </div>
+
+  <div class="summary">
+    <div class="sum-cell"><p class="sum-val" style="color:#dc2626">${barredStudents.length}</p><p class="sum-lbl">Students Barred</p></div>
+    <div class="sum-cell"><p class="sum-val" style="color:#2563eb">${students.length}</p><p class="sum-lbl">Total Enrolled</p></div>
+    <div class="sum-cell"><p class="sum-val" style="color:#16a34a">${students.length - barredStudents.length}</p><p class="sum-lbl">Eligible Students</p></div>
+    <div class="sum-cell"><p class="sum-val" style="color:#9ca3af">${courses.length}</p><p class="sum-lbl">Total Courses</p></div>
+  </div>
+
+  ${barredStudents.length === 0
+    ? '<p style="text-align:center;color:#16a34a;font-weight:700;font-size:13px;margin:2rem 0">✓ All students are currently eligible — no one is barred.</p>'
+    : `<table>
+    <thead><tr><th>#</th><th>Matric</th><th>Student Name</th><th>Level</th><th>Barred Courses (with Attendance %)</th><th style="text-align:center">No. of Courses Barred</th></tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+  <p style="margin:8px 0 0;font-size:10px;color:#9ca3af">Students are barred from any course where attendance is below the minimum threshold.</p>`}
+
+  <div class="foot">
+    <span>Gateway ICT Polytechnic · EEE Dept. · EEE FACE-ID System</span>
+    <span>Printed: ${date}</span>
+  </div>
+  </body></html>`
+
+  const printable = html.replace('</body>', `<script>window.onload=function(){window.print()}<\/script></body>`)
+  const blob = new Blob([printable], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const w = window.open(url, '_blank')
+  if (!w) { const a = document.createElement('a'); a.href = url; a.download = `barring-list-${settings.session||'session'}.html`; a.click() }
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
+
 export default function EligibilityPage() {
   const [courses,     setCourses]     = useState([])
   const [students,    setStudents]    = useState([])
@@ -118,6 +222,7 @@ export default function EligibilityPage() {
   const [loading,     setLoading]     = useState(true)
   const [loadingRecs, setLoadingRecs] = useState(false)
   const [printing,    setPrinting]    = useState(false)
+  const [barring,     setBarring]     = useState(false)
 
   useEffect(() => {
     Promise.all([getCourses(), getEnrolledStudents(), getSettings()])
@@ -165,7 +270,14 @@ export default function EligibilityPage() {
               onClick={async () => { setPrinting(true); try { await printEligibility(course, rows, settings) } finally { setPrinting(false) } }}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.1rem', borderRadius: 10, border: 'none', background: printing || !course ? '#94a3b8' : '#1F6F5F', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: printing || !course ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {printing ? <Spinner size={13} color="white" /> : <Printer size={13} />}
-              {printing ? 'Preparing…' : 'Print / PDF'}
+              {printing ? 'Preparing…' : 'Per-Course List'}
+            </button>
+            <button
+              disabled={barring || loading}
+              onClick={async () => { setBarring(true); try { await buildFullBarringList(courses, students, settings) } finally { setBarring(false) } }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.1rem', borderRadius: 10, border: 'none', background: barring || loading ? '#94a3b8' : '#b91c1c', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: barring || loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              {barring ? <Spinner size={13} color="white" /> : <Download size={13} />}
+              {barring ? 'Preparing…' : 'All Courses Barring List'}
             </button>
           </div>
         </div>

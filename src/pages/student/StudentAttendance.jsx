@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Printer, CheckCircle, AlertTriangle, ChevronDown, Activity, BarChart2, AlertCircle } from 'lucide-react'
+import { Printer, CheckCircle, AlertTriangle, ChevronDown, Activity, BarChart2, AlertCircle, FileText, History } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
-import { getAttendanceSummary, submitAttendanceDispute, getMyDisputes } from '@/services/studentService'
-import { getCourses } from '@/services/courseService'
+import { getAttendanceSummary, submitAttendanceDispute, getMyDisputes, getSessionArchives, getSessionArchiveData } from '@/services/studentService'
+import { getCourses, getSettings } from '@/services/courseService'
 import { useAuthStore } from '@/store/authStore'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -216,6 +216,102 @@ async function buildPrintAll(courses, studentName, matric, student) {
   </body></html>`
 }
 
+async function buildAttendanceCertificate(courses, studentName, matric, student, settings) {
+  const logoDataUrl = await getLogoDataUrl()
+  const date  = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+  const overall = courses.length > 0
+    ? Math.round(courses.reduce((s, c) => s + c.present, 0) / Math.max(courses.reduce((s, c) => s + c.total, 0), 1) * 100)
+    : 0
+  const courseRows = courses.map((c, i) => `<tr>
+    <td style="text-align:center;color:#9ca3af">${i+1}</td>
+    <td><strong>${c.code}</strong>${c.title ? ` — ${c.title}` : ''}</td>
+    <td style="text-align:center">${c.present}</td>
+    <td style="text-align:center">${c.total}</td>
+    <td style="text-align:center;font-weight:800;color:${c.pct>=90?'#16a34a':c.pct>=60?'#d97706':'#dc2626'}">${c.total > 0 ? c.pct + '%' : '—'}</td>
+    <td style="text-align:center">
+      <span style="padding:2px 10px;border-radius:99px;font-size:10px;font-weight:800;background:${c.pct>=90?'rgba(47,160,132,0.12)':c.pct>=60?'#fef9c3':'#fee2e2'};color:${c.pct>=90?'#2FA084':c.pct>=60?'#92400e':'#991b1b'}">
+        ${c.pct>=90?'Consistent':c.pct>=60?'Keep Attending':'At Risk'}
+      </span>
+    </td>
+  </tr>`).join('')
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Attendance Certificate</title>
+  <style>
+    *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;padding:40px 52px;color:#111;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th{background:#1F6F5F;color:#fff;padding:9px 13px;text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase}
+    td{padding:9px 13px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+    tr:nth-child(even) td{background:#f9fafb}
+    .hdr{display:flex;align-items:center;gap:22px;padding-bottom:18px;margin-bottom:22px;border-bottom:3px solid #1F6F5F}
+    .cert{background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:16px 20px;margin:18px 0;text-align:center}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:16px}
+    .meta-label{font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin:0}
+    .meta-val{font-size:13px;font-weight:800;color:#111;margin:3px 0 0}
+    .sig{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+    .sig-line{border-top:1.5px solid #1F6F5F;padding-top:6px;font-size:10px;color:#1F6F5F;font-weight:700;text-align:center}
+    .foot{margin-top:28px;font-size:9px;color:#9ca3af;border-top:1px solid #e2e8f0;padding-top:10px;display:flex;justify-content:space-between}
+    @media print{body{padding:28px 36px}}
+  </style></head><body>
+  <div class="hdr">
+    ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:80px;height:80px;object-fit:contain" alt="Logo"/>` : ''}
+    <div>
+      <h1 style="margin:0;font-size:20px;font-weight:900;color:#1F6F5F;text-transform:uppercase;letter-spacing:-.01em">GATEWAY ICT POLYTECHNIC</h1>
+      <p style="margin:2px 0 0;font-size:10px;color:#6b7280">Saapade, Ogun State, Nigeria</p>
+      <p style="margin:6px 0 0;font-size:12px;font-weight:800;color:#1e3a5f">Department of Electrical / Electronics Engineering</p>
+      <p style="margin:2px 0 0;font-size:11px;color:#2FA084;font-weight:700">EEE FACE-ID Attendance Certificate</p>
+    </div>
+  </div>
+
+  <div class="cert">
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.08em">Certificate of Attendance Record</p>
+    <p style="margin:0;font-size:12px;color:#374151;line-height:1.6">
+      This is to certify that <strong>${studentName}</strong> (Matric: <strong>${matric}</strong>),
+      a student of the Department of Electrical/Electronics Engineering, has maintained the attendance
+      record detailed below for the <strong>${settings?.session || '—'} ${settings?.semester || ''}</strong> academic period.
+    </p>
+  </div>
+
+  <div class="meta">
+    <div><p class="meta-label">Full Name</p><p class="meta-val">${studentName}</p></div>
+    <div><p class="meta-label">Matric Number</p><p class="meta-val">${matric}</p></div>
+    <div><p class="meta-label">Department</p><p class="meta-val">Electrical / Electronics Eng.</p></div>
+    <div><p class="meta-label">Option</p><p class="meta-val">${student?.option || '—'}</p></div>
+    <div><p class="meta-label">Level</p><p class="meta-val">${student?.level || '—'}</p></div>
+    <div><p class="meta-label">Date Issued</p><p class="meta-val">${date}</p></div>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Course</th><th style="text-align:center">Present</th><th style="text-align:center">Total</th><th style="text-align:center">Attendance</th><th style="text-align:center">Status</th></tr></thead>
+    <tbody>${courseRows}</tbody>
+    <tfoot>
+      <tr style="background:#1F6F5F;color:#fff">
+        <td colspan="2" style="font-weight:800;color:#fff;padding:9px 13px">Overall Attendance</td>
+        <td style="text-align:center;font-weight:900;color:#fff;padding:9px 13px">${courses.reduce((s,c)=>s+c.present,0)}</td>
+        <td style="text-align:center;font-weight:900;color:#fff;padding:9px 13px">${courses.reduce((s,c)=>s+c.total,0)}</td>
+        <td style="text-align:center;font-weight:900;color:#fff;padding:9px 13px">${overall}%</td>
+        <td style="padding:9px 13px"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sig">
+    <div>
+      <div style="height:40px"></div>
+      <p class="sig-line">Head of Department<br><span style="font-weight:400;color:#6b7280">Dept. of Electrical / Electronics Engineering</span></p>
+    </div>
+    <div>
+      <div style="height:40px"></div>
+      <p class="sig-line">Academic Affairs Officer<br><span style="font-weight:400;color:#6b7280">Gateway ICT Polytechnic, Saapade</span></p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>This certificate is computer-generated by the EEE FACE-ID Attendance Management System.</span>
+    <span>Printed: ${date}</span>
+  </div>
+  </body></html>`
+}
+
 function openPrint(html, filename = 'attendance-report.html') {
   const printable = html.replace('</body>', `<script>window.onload=function(){window.print()}<\/script></body>`)
   const blob = new Blob([printable], { type: 'text/html;charset=utf-8' })
@@ -245,10 +341,18 @@ export default function StudentAttendance() {
   const [student,   setStudent]   = useState(null)
   const [courseMap, setCourseMap] = useState({})
   const [disputes,  setDisputes]  = useState([])
-  const [disputeModal, setDisputeModal] = useState(null) // { rec, courseCode }
+  const [disputeModal, setDisputeModal] = useState(null)
   const [disputeText,  setDisputeText]  = useState('')
   const [submitting,   setSubmitting]   = useState(false)
   const [submitDone,   setSubmitDone]   = useState(false)
+  const [settings,     setSettings]     = useState({})
+  const [certPrinting, setCertPrinting] = useState(false)
+  // History tab
+  const [archives,        setArchives]        = useState([])
+  const [archiveLoading,  setArchiveLoading]  = useState(false)
+  const [selectedArchive, setSelectedArchive] = useState('')
+  const [archiveData,     setArchiveData]     = useState(null)
+  const [archiveFetching, setArchiveFetching] = useState(false)
 
   useEffect(() => {
     if (!matric) return
@@ -257,7 +361,9 @@ export default function StudentAttendance() {
       supabase.from('students').select('level, option').eq('matric', matric).single(),
       getCourses(),
       getMyDisputes(matric),
-    ]).then(([data, { data: sd }, courseList, myDisputes]) => {
+      getSettings(),
+    ]).then(([data, { data: sd }, courseList, myDisputes, st]) => {
+      if (st) setSettings(st)
       const map = {}
       ;(courseList || []).forEach(c => { map[c.id] = c })
       setCourseMap(map)
@@ -269,6 +375,19 @@ export default function StudentAttendance() {
       setDisputes(myDisputes || [])
     }).finally(() => setLoading(false))
   }, [matric])
+
+  useEffect(() => {
+    if (tab !== 'history') return
+    if (archives.length > 0) return
+    setArchiveLoading(true)
+    getSessionArchives().then(a => { setArchives(a); if (a.length) setSelectedArchive(a[0].id) }).finally(() => setArchiveLoading(false))
+  }, [tab])
+
+  useEffect(() => {
+    if (!selectedArchive) return
+    setArchiveFetching(true); setArchiveData(null)
+    getSessionArchiveData(selectedArchive).then(a => setArchiveData(a?.data || null)).finally(() => setArchiveFetching(false))
+  }, [selectedArchive])
 
   async function handleSubmitDispute() {
     if (!disputeModal || !disputeText.trim()) return
@@ -323,7 +442,7 @@ export default function StudentAttendance() {
       {/* ── Tab switcher + Print (always visible) ── */}
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.4rem' }}>
         <div style={{ flex: 1, display: 'flex', gap: 5, background: '#e8edf0', border: '1px solid #e2e8f0', borderRadius: 16, padding: 5 }}>
-          {[{ id: 'course', label: 'By Course' }, { id: 'all', label: 'All Courses' }].map(t => (
+          {[{ id: 'course', label: 'By Course' }, { id: 'all', label: 'All Courses' }, { id: 'history', label: 'History' }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex: 1, padding: '0.58rem', borderRadius: 12, border: 'none', cursor: 'pointer',
               fontSize: '0.85rem', fontWeight: 700, transition: 'all 0.2s', fontFamily: 'inherit',
@@ -333,6 +452,19 @@ export default function StudentAttendance() {
             }}>{t.label}</button>
           ))}
         </div>
+        <button
+          disabled={certPrinting || !hasData}
+          onClick={async () => {
+            setCertPrinting(true)
+            try { openPrint(await buildAttendanceCertificate(courses, studentName, matric, student, settings), 'attendance-certificate.html') }
+            finally { setCertPrinting(false) }
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.62rem 1.1rem', borderRadius: 13, border: 'none', cursor: certPrinting || !hasData ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 700, fontFamily: 'inherit', background: certPrinting || !hasData ? '#94a3b8' : '#6366f1', color: '#fff', boxShadow: '0 2px 10px rgba(99,102,241,0.28)', transition: 'all 0.2s', flexShrink: 0 }}
+          onMouseEnter={e => { if (!certPrinting && hasData) e.currentTarget.style.background = '#4f46e5' }}
+          onMouseLeave={e => { if (!certPrinting && hasData) e.currentTarget.style.background = '#6366f1' }}
+        >
+          {certPrinting ? <Spinner size={15} color="white" /> : <FileText size={15} />} Certificate
+        </button>
         <button
           onClick={async () => {
             if (!hasData) { alert('No attendance records to print yet.'); return }
@@ -540,7 +672,78 @@ export default function StudentAttendance() {
             </p>
           </div>
         </div>
-      )}
+      ) : tab === 'history' ? (
+        /* Past semesters from archives */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          {archiveLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4rem' }}><Spinner size={28} color="white" /></div>
+          ) : archives.length === 0 ? (
+            <div style={{ ...CARD, padding: '4rem 2rem', textAlign: 'center' }}>
+              <History size={40} color="#94a3b8" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+              <p style={{ color: '#374151', fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>No archived semesters yet</p>
+              <p style={{ color: '#6b7280', fontSize: '0.82rem', margin: '0.4rem 0 0', lineHeight: 1.6 }}>Past semester records will appear here once the admin archives a session.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ position: 'relative' }}>
+                <select value={selectedArchive} onChange={e => setSelectedArchive(e.target.value)} style={{ width: '100%', appearance: 'none', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.95)', borderRadius: 14, padding: '0.85rem 2.75rem 0.85rem 1.15rem', fontSize: '0.95rem', fontWeight: 700, color: '#1f2937', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+                  {archives.map(a => <option key={a.id} value={a.id}>{a.session} · {a.semester} ({a.total_students} students)</option>)}
+                </select>
+                <ChevronDown size={17} color="#6b7280" style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              </div>
+
+              {archiveFetching ? (
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '3rem' }}><Spinner size={24} color="white" /></div>
+              ) : archiveData ? (() => {
+                const myRecs = (archiveData.attendance || []).filter(r => r.matric === matric)
+                const cMap = {}
+                myRecs.forEach(r => {
+                  const code = r.course_code || 'Unknown'
+                  if (!cMap[code]) cMap[code] = { code, title: r.course_title || '', present: 0, total: 0 }
+                  cMap[code].total++
+                  if (r.status === 'present') cMap[code].present++
+                })
+                const histCourses = Object.values(cMap).map(c => ({ ...c, pct: c.total > 0 ? Math.round(c.present / c.total * 100) : 0 })).sort((a, b) => a.code.localeCompare(b.code))
+                return histCourses.length === 0 ? (
+                  <div style={{ ...CARD, padding: '3rem 2rem', textAlign: 'center' }}>
+                    <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: 0 }}>No records found for your matric number in this archive.</p>
+                  </div>
+                ) : (
+                  <div style={{ ...CARD, padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '1rem 1.4rem', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                      <p style={{ color: '#1f2937', fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>
+                        {archives.find(a => a.id === selectedArchive)?.session} · {archives.find(a => a.id === selectedArchive)?.semester}
+                      </p>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead><tr>{['Course','Present','Total','Attendance','Status'].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+                        <tbody>
+                          {histCourses.map(c => (
+                            <tr key={c.code}>
+                              <td style={{ ...TD, fontWeight: 700, color: '#1f2937' }}>{c.code}{c.title ? ` — ${c.title}` : ''}</td>
+                              <td style={{ ...TD, color: '#16a34a', fontWeight: 600 }}>{c.present}</td>
+                              <td style={TD}>{c.total}</td>
+                              <td style={{ ...TD, fontWeight: 800, color: c.pct >= 75 ? '#d97706' : '#dc2626' }}>{c.pct}%</td>
+                              <td style={TD}>
+                                {c.pct >= 90
+                                  ? <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2FA084', background: 'rgba(47,160,132,0.10)', padding: '0.18rem 0.6rem', borderRadius: 99 }}>Consistent</span>
+                                  : c.pct >= 75
+                                  ? <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '0.18rem 0.6rem', borderRadius: 99 }}>Keep Attending</span>
+                                  : <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '0.18rem 0.6rem', borderRadius: 99 }}>At Risk</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })() : null}
+            </>
+          )}
+        </div>
+      ) : null}
       {/* Dispute modal */}
       {disputeModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '1rem' }}>
