@@ -189,8 +189,12 @@ export default function StudentDashboard() {
   for (const r of allRecs) { if (r.status === 'present' || r.present) streak++; else break }
 
   const pctColor  = overallPct >= 75 ? '#6FCF97' : overallPct >= 50 ? '#fbbf24' : '#ff8080'
-  // Suppress green/red judgment until there is enough data to be meaningful
-  const gaugeColor = totalClasses >= 5 ? pctColor : '#94a3b8'
+  // Semester progress: attended / expected-semester-total (15 classes per course, per semester)
+  // Ring fill grows naturally from 0→100% over the semester; attendance rate shown as secondary text
+  const estimatedSemesterTotal = Math.max(courses.length * 15, totalClasses)
+  const semesterPct = estimatedSemesterTotal > 0
+    ? Math.min(Math.round((attendedClasses / estimatedSemesterTotal) * 100), 100)
+    : 0
   const riskColor  = atRisk.length > 0 ? '#b91c1c' : '#166534'
   const riskIconBg = atRisk.length > 0 ? '#fee2e2' : '#dcfce7'
 
@@ -227,13 +231,14 @@ export default function StudentDashboard() {
               </div>
               <svg width={124} height={124} viewBox="0 0 124 124"
                 style={{ display: 'block', flexShrink: 0, width: 'clamp(86px, 22vw, 124px)', height: 'clamp(86px, 22vw, 124px)' }}>
-                {(() => { const R=46,C=2*Math.PI*R,dash=(Math.min(overallPct,100)/100)*C; return (<>
+                {(() => { const R=46,C=2*Math.PI*R,dash=(semesterPct/100)*C; return (<>
                   <circle cx={62} cy={62} r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10}/>
-                  <circle cx={62} cy={62} r={R} fill="none" stroke={gaugeColor} strokeWidth={10}
+                  <circle cx={62} cy={62} r={R} fill="none" stroke={pctColor} strokeWidth={10}
                     strokeDasharray={`${dash} ${C}`} strokeLinecap="round" transform="rotate(-90 62 62)"
-                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${gaugeColor}88)`}}/>
-                  <text x={62} y={53} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={24} fontWeight={900} fontFamily="inherit">{overallPct}%</text>
-                  <text x={62} y={72} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.5)" fontSize={8} fontWeight={600} fontFamily="inherit">{attendedClasses}/{totalClasses} classes</text>
+                    style={{transition:'stroke-dasharray 1.4s cubic-bezier(0.34,1.56,0.64,1)',filter:`drop-shadow(0 0 6px ${pctColor}88)`}}/>
+                  <text x={62} y={47} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={22} fontWeight={900} fontFamily="inherit">{semesterPct}%</text>
+                  <text x={62} y={64} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.7)" fontSize={8} fontWeight={700} fontFamily="inherit">{overallPct}% rate</text>
+                  <text x={62} y={75} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize={7.5} fontWeight={600} fontFamily="inherit">{attendedClasses}/{totalClasses} classes</text>
                 </>)})()}
               </svg>
             </div>
