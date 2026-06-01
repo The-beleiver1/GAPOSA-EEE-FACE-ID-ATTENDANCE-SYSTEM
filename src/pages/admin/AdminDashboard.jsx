@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Users, BookOpen, AlertTriangle, BarChart2, LayoutDashboard } from 'lucide-react'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
@@ -14,6 +15,7 @@ import {
 } from 'recharts'
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const { profile } = useAuthStore()
   const [loading,    setLoading]    = useState(true)
   const [students,   setStudents]   = useState([])
@@ -108,10 +110,10 @@ export default function AdminDashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Enrolled Students" value={students.length}          sub="View Details" accent="blue"   icon={Users} />
-        <StatCard label="Active Courses"           value={courses.length}           sub="View Courses" accent="green"  icon={BookOpen} />
-        <StatCard label="Below 75% Attendance"     value={stats.below75}            sub="View Students" accent="red"   icon={AlertTriangle} />
-        <StatCard label="Scans This Week"          value={stats.scansThisWeek}      sub={stats.scansThisWeek ? `Week ${Math.max(...filtered.map(r=>r.week||0))}` : 'No data yet'} accent="purple" icon={BarChart2} />
+        <StatCard label="Total Enrolled Students" value={students.length}     sub="View all students →"       accent="blue"   icon={Users}         onClick={() => navigate('/admin/students')} />
+        <StatCard label="Active Courses"           value={courses.length}      sub="Manage courses →"          accent="green"  icon={BookOpen}       onClick={() => navigate('/admin/courses')} />
+        <StatCard label="Below 75% Attendance"     value={stats.below75}       sub="Check eligibility →"       accent="red"    icon={AlertTriangle}  onClick={() => navigate('/admin/eligibility')} />
+        <StatCard label="Scans This Week"          value={stats.scansThisWeek} sub="View full analytics →"     accent="purple" icon={BarChart2}      onClick={() => navigate('/admin/hod')} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">

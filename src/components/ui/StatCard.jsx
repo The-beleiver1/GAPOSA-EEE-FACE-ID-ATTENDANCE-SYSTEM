@@ -20,7 +20,7 @@ export function StatCard({ label, value, sub, accent = 'blue', icon: Icon, onCli
         <div>
           <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
           <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+          {sub && <p className={`text-xs mt-0.5 ${onClick ? 'text-brand-600 font-semibold' : 'text-gray-400'}`}>{sub}</p>}
         </div>
         {Icon && (
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg[accent]}`}>
