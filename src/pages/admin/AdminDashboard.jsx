@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { getEnrolledStudents, getAllAttendanceWithDetails } from '@/services/studentService'
 import { getCourses, getSettings } from '@/services/courseService'
+import { normalizeLevel } from '@/utils'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -73,8 +74,8 @@ export default function AdminDashboard() {
     return { present, absent, below75, scansThisWeek, pieData, avgPct, weeklyData }
   }, [filtered])
 
-  const levelCounts = ['ND I', 'ND II', 'HND I', 'HND II'].map(lvl => ({
-    level: lvl, count: students.filter(s => s.level === lvl).length,
+  const levelCounts = ['ND 1', 'ND 2', 'HND 1', 'HND 2'].map(lvl => ({
+    level: lvl, count: students.filter(s => normalizeLevel(s.level) === normalizeLevel(lvl)).length,
   }))
 
   if (loading) return <AdminLayout><div className="flex justify-center py-20"><Spinner size={32} color="brand" /></div></AdminLayout>
@@ -180,7 +181,7 @@ export default function AdminDashboard() {
             <p style={{ fontSize:'0.78rem', color:'#94a3b8', textAlign:'center', padding:'2.5rem 0' }}>No attendance data yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={140}>
-              <AreaChart data={stats.weeklyData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <AreaChart data={stats.weeklyData} margin={{ top: 4, right: 12, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#2FA084" stopOpacity={0.3} />
