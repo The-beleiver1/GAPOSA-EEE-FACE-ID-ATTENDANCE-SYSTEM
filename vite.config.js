@@ -14,7 +14,6 @@ export default defineConfig({
           'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-charts':   ['recharts'],
-          'vendor-xlsx':     ['xlsx'],
           'vendor-face':     ['face-api.js'],
           'vendor-bcrypt':   ['bcryptjs'],
         },

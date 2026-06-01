@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx'
 import { useState, useEffect, useRef } from 'react'
 import { Upload, Trash2, Printer, Search, Filter, Calendar, Clock, X, BookOpen } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
@@ -48,12 +49,13 @@ export default function MasterListPage() {
     if (!file) return
     setUploading(true)
     try {
-      const XLSX = await import('xlsx')
       const ab   = await file.arrayBuffer()
       const wb   = XLSX.read(ab)
-      const ws   = wb.Sheets[wb.SheetNames[0]]
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 })
-      const students = parseExcelStudentList(data)
+      const students = wb.SheetNames.flatMap(sheetName => {
+        const ws   = wb.Sheets[sheetName]
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 })
+        return parseExcelStudentList(data)
+      })
       if (!students.length) throw new Error('No valid students found in file')
       await uploadMasterList(students)
       const updated = await getMasterList()

@@ -533,7 +533,7 @@ export async function getMasterList() {
   try {
     const { data, error } = await supabase.from('master_list').select('*').order('name')
     if (error) return []
-    return data || []
+    return (data || []).map(s => ({ ...s, course: s.option || s.course || '' }))
   } catch (err) {
     if (DEV) console.warn('getMasterList error:', err.message)
     return []
