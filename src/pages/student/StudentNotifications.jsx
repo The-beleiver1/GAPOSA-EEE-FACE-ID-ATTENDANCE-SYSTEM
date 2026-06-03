@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, BellOff, FileText, Fingerprint, Bell } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { getAttendanceSummary, getMyAbsenceRequests, getMyReenrollRequests } from '@/services/studentService'
+import { getCourses } from '@/services/courseService'
 import { useAuthStore } from '@/store/authStore'
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import { AnimatedTitle } from '@/components/ui/AnimatedTitle'
@@ -52,7 +53,13 @@ export default function StudentNotifications() {
       getAttendanceSummary(matric),
       getMyAbsenceRequests(matric),
       getMyReenrollRequests(matric),
-    ]).then(([s, absReqs, reenrollReqs]) => {
+      getCourses(),
+    ]).then(([s, absReqs, reenrollReqs, courses]) => {
+      // Build UUID → course label map
+      const courseLabel = {}
+      for (const c of (courses || [])) {
+        courseLabel[c.id] = c.code ? `${c.code} — ${c.title}` : (c.title || 'Unknown Course')
+      }
       const items = []
 
       // ── Attendance notifications ──
@@ -101,7 +108,7 @@ export default function StudentNotifications() {
               id: `course-${cid}`,
               type: 'warning',
               icon: 'alert',
-              title: `${cid} — At Risk`,
+              title: `${courseLabel[cid] || 'Course'} — At Risk`,
               body: `Current attendance: ${pct}% (${c.present}/${c.total} classes attended). Attend ${needed} more consecutive class${needed === 1 ? '' : 'es'} without absence to recover your standing in this course.`,
             })
           }
