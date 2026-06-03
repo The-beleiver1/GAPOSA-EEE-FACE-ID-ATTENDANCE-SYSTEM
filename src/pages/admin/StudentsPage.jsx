@@ -25,14 +25,6 @@ function StudentAvatar({ name, photoUrl, size = 28 }) {
   )
 }
 
-function getCourseShort(matric) {
-  if (!matric) return '—'
-  const m = String(matric).toUpperCase()
-  if (m.includes('240137')) return 'Power & Mach.'
-  if (m.includes('240136')) return 'Elec. & Tel.'
-  if (m.includes('240106')) return 'EEE Tech.'
-  return '—'
-}
 
 const STATUS_OPTIONS = ['present', 'absent']
 const STATUS_STYLES = {
@@ -299,7 +291,7 @@ export default function StudentsPage() {
                   </td>
                   <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.62rem', color: '#6b7280' }}>{s.matric}</td>
                   <td style={{ padding: '0.45rem 0.4rem', color: '#6b7280' }}>{s.level}</td>
-                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#374151' }}>{getCourseShort(s.matric)}</td>
+                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#374151', fontSize: '0.7rem' }}>{s.option || '—'}</td>
                   <td style={{ padding: '0.45rem 0.4rem' }}><Badge status="active" /></td>
                   <td style={{ padding: '0.45rem 0.4rem' }}>
                     <div style={{ display: 'flex', gap: 4 }}>
