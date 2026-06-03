@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { User, Send, CheckCircle, XCircle, Copy, Check } from 'lucide-react'
+import { User, Send, CheckCircle, XCircle, Copy, Check, X } from 'lucide-react'
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { Spinner } from '@/components/ui/Spinner'
@@ -22,6 +22,7 @@ export default function StudentProfile() {
   const [student,       setStudent]       = useState(null)
   const [loading,       setLoading]       = useState(true)
   const [telegramLinked, setTelegramLinked] = useState(false)
+  const [lightbox,       setLightbox]       = useState(false)
   const [qrDataUrl,     setQrDataUrl]     = useState('')
   const qrGenerated = useRef(false)
 
@@ -118,6 +119,27 @@ export default function StudentProfile() {
 
   return (
     <StudentLayout>
+
+      {/* Photo lightbox */}
+      {lightbox && student?.photo_url && (
+        <div onClick={() => setLightbox(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}>
+          <button onClick={() => setLightbox(false)}
+            style={{ position: 'absolute', top: 18, right: 18, width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.22)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 10 }}>
+            <X size={18} />
+          </button>
+          <div style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <img src={student.photo_url} alt={student.name}
+              style={{ maxWidth: '82vw', maxHeight: '78vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', display: 'block', margin: '0 auto' }} />
+            <p style={{ margin: '0.85rem 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600 }}>{student.name}</p>
+            <button onClick={() => setLightbox(false)}
+              style={{ marginTop: '0.75rem', padding: '0.45rem 1.25rem', borderRadius: 99, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              ← Back
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ marginBottom: '0.25rem' }}>
@@ -134,22 +156,26 @@ export default function StudentProfile() {
         <div style={CARD}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {student?.photo_url ? (
-              <img src={student.photo_url} alt={student.name}
-                style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: '0 3px 14px rgba(31,111,95,0.3)', border: '2px solid rgba(47,160,132,0.3)' }}
-                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
-              />
-            ) : null}
-            <div style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#1F6F5F,#2FA084)',
-              display: student?.photo_url ? 'none' : 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.15rem', fontWeight: 900, color: '#fff',
-              flexShrink: 0, letterSpacing: '0.04em',
-              boxShadow: '0 3px 14px rgba(31,111,95,0.3)',
-            }}>
-              {initials(student?.name)}
-            </div>
+              <button onClick={() => setLightbox(true)} title="Click to view full photo"
+                style={{ border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in', flexShrink: 0, borderRadius: '50%', position: 'relative' }}>
+                <img src={student.photo_url} alt={student.name}
+                  style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', display: 'block', boxShadow: '0 3px 14px rgba(31,111,95,0.3)', border: '2px solid rgba(47,160,132,0.3)' }} />
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: '50%', background: '#2FA084', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{ width: 9, height: 9 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+                </div>
+              </button>
+            ) : (
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#1F6F5F,#2FA084)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.15rem', fontWeight: 900, color: '#fff',
+                flexShrink: 0, letterSpacing: '0.04em',
+                boxShadow: '0 3px 14px rgba(31,111,95,0.3)',
+              }}>
+                {initials(student?.name)}
+              </div>
+            )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', lineHeight: 1.25 }}>
                 {student?.name || '—'}

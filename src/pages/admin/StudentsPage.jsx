@@ -49,6 +49,14 @@ export default function StudentsPage() {
   const [courseMap,     setCourseMap]     = useState({})
   const [savingId,      setSavingId]      = useState(null)
 
+  // Photo lightbox
+  const [lightboxUrl,   setLightboxUrl]   = useState(null)
+
+  // Student profile panel
+  const [viewStudent,   setViewStudent]   = useState(null)
+  const [viewAtt,       setViewAtt]       = useState([])
+  const [viewAttLoading, setViewAttLoading] = useState(false)
+
   const PER_PAGE = 10
   const { toast } = useToast()
 
@@ -74,6 +82,17 @@ export default function StudentsPage() {
       setConfirmDelete(null)
     } catch (err) { toast(err.message || 'Failed to delete', 'error') }
     finally { setDeleting(false) }
+  }
+
+  async function openProfile(student) {
+    setViewStudent(student)
+    setViewAtt([])
+    setViewAttLoading(true)
+    try {
+      const records = await getStudentAttendance(student.matric)
+      setViewAtt(records)
+    } catch { /* silent */ }
+    finally { setViewAttLoading(false) }
   }
 
   async function openAttendance(student) {
@@ -107,6 +126,116 @@ export default function StudentsPage() {
 
   return (
     <AdminLayout>
+
+      {/* ── Photo lightbox ── */}
+      {lightboxUrl && (
+        <div onClick={() => setLightboxUrl(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}>
+          <button onClick={() => setLightboxUrl(null)}
+            style={{ position: 'absolute', top: 18, right: 18, width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.22)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 10 }}>
+            <X size={18} />
+          </button>
+          <img src={lightboxUrl} alt="Student photo"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '88vw', maxHeight: '88vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', cursor: 'default' }} />
+        </div>
+      )}
+
+      {/* ── Student profile panel ── */}
+      {viewStudent && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ width: '95vw', maxWidth: 460, background: '#fff', borderRadius: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', maxHeight: '92vh', overflow: 'hidden' }}>
+
+            {/* Panel header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem 0.8rem', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Student Profile</p>
+              <button onClick={() => setViewStudent(null)}
+                style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1.25rem' }}>
+              {/* Photo + name hero */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                {viewStudent.photo_url ? (
+                  <button onClick={() => setLightboxUrl(viewStudent.photo_url)} title="Click to enlarge"
+                    style={{ border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in', borderRadius: '50%', position: 'relative' }}>
+                    <img src={viewStudent.photo_url} alt={viewStudent.name}
+                      style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(47,160,132,0.3)', boxShadow: '0 6px 24px rgba(31,111,95,0.22)' }} />
+                    <div style={{ position: 'absolute', bottom: 3, right: 3, width: 24, height: 24, borderRadius: '50%', background: '#1F6F5F', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" style={{ width: 12, height: 12 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+                    </div>
+                  </button>
+                ) : (
+                  <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'linear-gradient(135deg,#2FA084,#1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 900, color: '#fff', boxShadow: '0 6px 24px rgba(31,111,95,0.22)' }}>
+                    {getInitials(viewStudent.name)}
+                  </div>
+                )}
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>{viewStudent.name}</p>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b' }}>{viewStudent.matric}</p>
+                </div>
+              </div>
+
+              {/* Info rows */}
+              <div style={{ background: '#f8fafc', borderRadius: 14, overflow: 'hidden', marginBottom: '1rem' }}>
+                {[
+                  { label: 'Level',      value: viewStudent.level  || '—' },
+                  { label: 'Course',     value: viewStudent.option || '—' },
+                  { label: 'Department', value: 'Electrical / Electronics Engineering' },
+                  { label: 'Status',     value: 'Enrolled', badge: true },
+                ].map(({ label, value, badge }, i, arr) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderBottom: i < arr.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>{label}</span>
+                    {badge ? (
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#16a34a', background: '#dcfce7', borderRadius: 99, padding: '3px 10px' }}>Enrolled</span>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Attendance summary */}
+              <p style={{ margin: '0 0 0.6rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Attendance Summary</p>
+              {viewAttLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem' }}><Spinner size={20} color="brand" /></div>
+              ) : (() => {
+                const present = viewAtt.filter(r => r.status === 'present' || r.present).length
+                const total   = viewAtt.length
+                const pct     = total > 0 ? Math.round(present / total * 100) : 0
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.5rem' }}>
+                    {[
+                      { label: 'Present', val: present, color: '#16a34a', bg: 'rgba(34,197,94,0.07)', border: 'rgba(34,197,94,0.18)' },
+                      { label: 'Absent',  val: total - present, color: '#dc2626', bg: 'rgba(239,68,68,0.07)',  border: 'rgba(239,68,68,0.18)' },
+                      { label: 'Rate',    val: `${pct}%`,  color: pct >= 75 ? '#16a34a' : '#dc2626', bg: '#f8fafc', border: '#e2e8f0' },
+                    ].map(({ label, val, color, bg, border }) => (
+                      <div key={label} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', borderRadius: 12, background: bg, border: `1px solid ${border}` }}>
+                        <p style={{ margin: '0 0 0.15rem', fontSize: '1.3rem', fontWeight: 900, color, lineHeight: 1 }}>{val}</p>
+                        <p style={{ margin: 0, fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Footer actions */}
+            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '0.6rem', flexShrink: 0 }}>
+              <button onClick={() => { setViewStudent(null); openAttendance(viewStudent) }}
+                style={{ flex: 1, padding: '0.6rem', borderRadius: 10, border: '1.5px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', color: '#6366f1', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                <ClipboardList size={13} /> Edit Attendance
+              </button>
+              <button onClick={() => setViewStudent(null)}
+                style={{ padding: '0.6rem 1.1rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                ← Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Delete modal ── */}
       {confirmDelete && (
@@ -285,8 +414,17 @@ export default function StudentsPage() {
                 <tr key={s.matric} style={{ borderBottom: '1px solid #f9fafb' }}>
                   <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden' }}>
-                      <StudentAvatar name={s.name} photoUrl={s.photo_url} />
-                      <span style={{ fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem' }}>{s.name}</span>
+                      {/* Click avatar → lightbox */}
+                      <button onClick={e => { e.stopPropagation(); if (s.photo_url) setLightboxUrl(s.photo_url) }}
+                        title={s.photo_url ? 'Click to enlarge photo' : ''}
+                        style={{ border: 'none', padding: 0, background: 'transparent', cursor: s.photo_url ? 'zoom-in' : 'default', flexShrink: 0, borderRadius: '50%' }}>
+                        <StudentAvatar name={s.name} photoUrl={s.photo_url} />
+                      </button>
+                      {/* Click name → profile panel */}
+                      <button onClick={() => openProfile(s)}
+                        style={{ border: 'none', padding: 0, background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#1F6F5F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem', fontFamily: 'inherit', textAlign: 'left', textDecoration: 'underline', textDecorationColor: 'rgba(31,111,95,0.3)', textUnderlineOffset: 2 }}>
+                        {s.name}
+                      </button>
                     </div>
                   </td>
                   <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.62rem', color: '#6b7280' }}>{s.matric}</td>
