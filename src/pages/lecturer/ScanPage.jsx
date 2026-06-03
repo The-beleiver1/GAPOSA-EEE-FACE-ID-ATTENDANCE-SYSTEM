@@ -412,19 +412,32 @@ export default function ScanPage() {
 
   function startQrMode() {
     setQrMode(true); setQrScanning(true)
+    let jsQRLib = null // import once, reuse every frame
+
     async function loop() {
-      if (!videoRef.current?.srcObject) { qrLoopRef.current = setTimeout(loop, 300); return }
+      const v = videoRef.current
+      if (!v?.srcObject || v.readyState < 2) {
+        qrLoopRef.current = setTimeout(loop, 150); return
+      }
       try {
-        const jsQR = (await import('jsqr')).default
+        // Cache import — importing on every frame blocks the thread
+        if (!jsQRLib) jsQRLib = (await import('jsqr')).default
+
         const canvas = document.createElement('canvas')
-        const v = videoRef.current
-        canvas.width = v.videoWidth || 640; canvas.height = v.videoHeight || 480
-        canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
-        const img = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
-        const code = jsQR(img.data, img.width, img.height)
+        const w = v.videoWidth  || 640
+        const h = v.videoHeight || 480
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(v, 0, 0, w, h)
+        const imgData = canvas.getContext('2d').getImageData(0, 0, w, h)
+
+        // attemptBoth handles normal AND inverted QR codes (white-on-dark)
+        const code = jsQRLib(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: 'attemptBoth',
+        })
+
         if (code?.data) {
           const matric = code.data.toUpperCase().trim()
-          const store = useScanStore.getState()
+          const store  = useScanStore.getState()
           if (!store.isAlreadyScanned(matric)) {
             const student = students.find(s => s.matric.toUpperCase() === matric)
             if (student) {
@@ -437,13 +450,16 @@ export default function ScanPage() {
               store.markPresent(student)
               toast(`QR ✓ ${student.name} — present`, 'success')
             } else {
-              toast(`QR scanned: ${matric} — not found in enrolled list`, 'error')
+              toast(`QR: ${matric} — not in enrolled list`, 'error')
             }
+            // Pause 2 s before resuming so the same code isn't re-scanned immediately
             qrLoopRef.current = setTimeout(loop, 2000); return
           }
         }
-      } catch { /* silent */ }
-      qrLoopRef.current = setTimeout(loop, 300)
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('[QR]', err?.message)
+      }
+      qrLoopRef.current = setTimeout(loop, 150) // ~6–7 fps is enough for QR
     }
     loop()
   }
