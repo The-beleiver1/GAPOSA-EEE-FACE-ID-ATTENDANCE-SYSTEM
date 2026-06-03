@@ -90,8 +90,6 @@ function PhotoLightbox({ src, alt = 'Photo', label = '', onClose }) {
         <span style={{ flex: 1, fontSize: '0.6rem', color: '#cbd5e1', textAlign: 'center' }}>
           {scale === 1 ? 'Scroll or + to zoom' : 'Drag to pan · double-tap to reset'}
         </span>
-        <button onClick={onClose}
-          style={{ padding: '0.5rem 1.1rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
 import { getLecturerCourses } from '@/services/courseService'
 import { getEnrolledStudents, getStudentsTelegramStatus } from '@/services/studentService'
+import { normalizeLevel } from '@/utils'
 import { Spinner } from '@/components/ui/Spinner'
 
 export default function LecturerStudentsPage() {
@@ -25,10 +26,11 @@ export default function LecturerStudentsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const levels = [...new Set(courses.map(c => c.level).filter(Boolean))]
+  // Normalise course levels so "HND 1" == "HND1" == "HND I" all match
+  const levels = [...new Set(courses.map(c => normalizeLevel(c.level)).filter(Boolean))]
 
   const filtered = students
-    .filter(s => levels.length === 0 || levels.includes(s.level))
+    .filter(s => levels.length === 0 || levels.includes(normalizeLevel(s.level)))
     .filter(s => selectedLevel === 'All' || s.level === selectedLevel)
     .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.matric.toLowerCase().includes(search.toLowerCase()))
 

@@ -26,7 +26,8 @@ export function LecturerLayout({ children }) {
   const [open, setOpen] = useState(false)
   useAutoLogout()
 
-  const photoUrl = profile?.photo_url || null
+  // Reject stale blob: URLs — they become invalid after page refresh
+  const photoUrl = profile?.photo_url?.startsWith('blob:') ? null : (profile?.photo_url || null)
 
   async function handleLogout() {
     await signOut(); logout(); navigate('/'); toast('Logged out', 'success')

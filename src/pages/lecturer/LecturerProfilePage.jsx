@@ -29,11 +29,9 @@ export default function LecturerProfilePage() {
     if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return }
     if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); return }
 
-    // 1. Show photo instantly from local device — never revoke this blob this session
+    // Show blob immediately for this session only — never save blob to auth store
     const blob = URL.createObjectURL(file)
     setPreviewUrl(blob)
-    // Update auth store so the sidebar shows the photo immediately
-    setProfile({ ...profile, photo_url: blob })
 
     setUploading(true)
     try {
@@ -43,8 +41,9 @@ export default function LecturerProfilePage() {
       const { data: pub } = supabase.storage.from('lecturer-photos').getPublicUrl(path)
       const persistentUrl = pub?.publicUrl
       if (persistentUrl) {
-        // Save permanent URL to DB for future sessions (background — don't block UI)
         await supabase.from('users').update({ photo_url: persistentUrl }).eq('id', profile.id)
+        // Save real URL (not blob) to auth store — persists across sessions correctly
+        setProfile({ ...profile, photo_url: persistentUrl })
       }
       toast('Photo updated', 'success')
     } catch (err) {
@@ -55,8 +54,9 @@ export default function LecturerProfilePage() {
     }
   }
 
-  // Displayed photo: local blob preview > persisted store URL > nothing (initials)
-  const displayPhoto = previewUrl || profile?.photo_url || null
+  // previewUrl (fresh blob) > real Supabase URL from store (reject stale blobs from localStorage)
+  const storedUrl    = profile?.photo_url?.startsWith('blob:') ? null : (profile?.photo_url || null)
+  const displayPhoto = previewUrl || storedUrl
 
   async function handlePasswordChange(e) {
     e.preventDefault()
