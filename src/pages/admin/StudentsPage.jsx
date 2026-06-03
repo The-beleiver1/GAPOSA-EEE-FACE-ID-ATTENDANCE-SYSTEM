@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Printer, Trash2, Users, ClipboardList, X, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { useAuthStore } from '@/store/authStore'
@@ -25,6 +25,109 @@ function StudentAvatar({ name, photoUrl, size = 28 }) {
   )
 }
 
+
+function PhotoLightbox({ src, alt = 'Photo', label = '', onClose }) {
+  const [scale,  setScale]  = useState(1)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const dragging  = useRef(false)
+  const lastPos   = useRef({ x: 0, y: 0 })
+  const lastDist  = useRef(null)
+
+  function zoom(delta) {
+    setScale(s => {
+      const next = Math.min(4, Math.max(1, parseFloat((s + delta).toFixed(2))))
+      if (next === 1) setOffset({ x: 0, y: 0 })
+      return next
+    })
+  }
+
+  function onWheel(e) { e.preventDefault(); zoom(e.deltaY < 0 ? 0.2 : -0.2) }
+
+  function onMouseDown(e) {
+    if (scale <= 1) return
+    dragging.current = true
+    lastPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }
+  }
+  function onMouseMove(e) {
+    if (!dragging.current) return
+    setOffset({ x: e.clientX - lastPos.current.x, y: e.clientY - lastPos.current.y })
+  }
+  function onMouseUp() { dragging.current = false }
+
+  function onTouchStart(e) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      lastDist.current = Math.hypot(dx, dy)
+    } else if (e.touches.length === 1 && scale > 1) {
+      dragging.current = true
+      lastPos.current = { x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y }
+    }
+  }
+  function onTouchMove(e) {
+    if (e.touches.length === 2 && lastDist.current) {
+      e.preventDefault()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.hypot(dx, dy)
+      zoom((dist - lastDist.current) / 120)
+      lastDist.current = dist
+    } else if (e.touches.length === 1 && dragging.current) {
+      setOffset({ x: e.touches[0].clientX - lastPos.current.x, y: e.touches[0].clientY - lastPos.current.y })
+    }
+  }
+  function onTouchEnd() { dragging.current = false; lastDist.current = null }
+
+  return (
+    <div onClick={e => e.stopPropagation()}
+      style={{ background: '#fff', borderRadius: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.22)', overflow: 'hidden', maxWidth: '92vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column', width: 480 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+        <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          {label || 'Photo'}
+        </p>
+        <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+          <X size={14} />
+        </button>
+      </div>
+      {/* Photo canvas */}
+      <div style={{ overflow: 'hidden', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', cursor: scale > 1 ? 'grab' : 'default', userSelect: 'none', minHeight: 260 }}
+        onWheel={onWheel}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <img src={src} alt={alt} draggable={false}
+          onDoubleClick={() => { setScale(1); setOffset({ x: 0, y: 0 }) }}
+          style={{
+            maxWidth: '72vw', maxHeight: '55vh', display: 'block',
+            borderRadius: scale > 1 ? 4 : 14,
+            objectFit: 'contain',
+            transform: `scale(${scale}) translate(${offset.x / scale}px, ${offset.y / scale}px)`,
+            transformOrigin: 'center',
+            transition: dragging.current ? 'none' : 'transform 0.18s ease',
+            userSelect: 'none', WebkitUserSelect: 'none',
+            boxShadow: scale === 1 ? '0 8px 32px rgba(31,111,95,0.15)' : 'none',
+          }} />
+      </div>
+      {/* Footer: zoom controls + hint + back */}
+      <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        <button onClick={() => zoom(-0.25)} disabled={scale <= 1}
+          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: scale > 1 ? 'pointer' : 'not-allowed', opacity: scale <= 1 ? 0.35 : 1, fontSize: '1.2rem', lineHeight: 1, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>−</button>
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', minWidth: 38, textAlign: 'center' }}>{Math.round(scale * 100)}%</span>
+        <button onClick={() => zoom(0.25)} disabled={scale >= 4}
+          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: scale < 4 ? 'pointer' : 'not-allowed', opacity: scale >= 4 ? 0.35 : 1, fontSize: '1.2rem', lineHeight: 1, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
+        {scale > 1 && (
+          <button onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }) }}
+            style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2FA084', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0 4px' }}>Reset</button>
+        )}
+        <span style={{ flex: 1, fontSize: '0.62rem', color: '#cbd5e1', textAlign: 'center' }}>
+          {scale === 1 ? 'Scroll or + to zoom' : 'Drag to pan · double-click to reset'}
+        </span>
+        <button onClick={onClose}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+      </div>
+    </div>
+  )
+}
 
 const STATUS_OPTIONS = ['present', 'absent']
 const STATUS_STYLES = {
@@ -130,14 +233,8 @@ export default function StudentsPage() {
       {/* ── Photo lightbox ── */}
       {lightboxUrl && (
         <div onClick={() => setLightboxUrl(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}>
-          <button onClick={() => setLightboxUrl(null)}
-            style={{ position: 'absolute', top: 18, right: 18, width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.22)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 10 }}>
-            <X size={18} />
-          </button>
-          <img src={lightboxUrl} alt="Student photo"
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '88vw', maxHeight: '88vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', cursor: 'default' }} />
+          style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <PhotoLightbox src={lightboxUrl} alt="Student photo" label="Student Photo" onClose={() => setLightboxUrl(null)} />
         </div>
       )}
 
