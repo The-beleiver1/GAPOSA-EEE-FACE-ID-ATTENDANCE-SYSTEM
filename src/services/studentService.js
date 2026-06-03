@@ -200,7 +200,7 @@ export async function getAllEnrolledStudents() {
   try {
     const { data: students, error } = await supabase
       .from('students')
-      .select('matric, name, level, option')
+      .select('matric, name, level, option, photo_url')
       .eq('enrolled', true)
 
     if (error || !students?.length) return []

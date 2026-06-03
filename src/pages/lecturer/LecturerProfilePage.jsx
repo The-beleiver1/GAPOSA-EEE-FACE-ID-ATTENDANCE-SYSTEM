@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CircleUser } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { CircleUser, Camera } from 'lucide-react'
 import { AnimatedLabel } from '@/components/ui/AnimatedLabel'
 import { LecturerLayout } from '@/components/layout/LecturerLayout'
 import { useAuthStore } from '@/store/authStore'
@@ -11,10 +11,45 @@ import { Spinner } from '@/components/ui/Spinner'
 export default function LecturerProfilePage() {
   const { profile } = useAuthStore()
   const { toast } = useToast()
+  const fileRef = useRef(null)
 
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
+  const [photoUrl,    setPhotoUrl]    = useState(null)
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const [uploading,   setUploading]   = useState(false)
+
+  useEffect(() => {
+    if (!profile?.id) return
+    supabase.from('users').select('photo_url').eq('id', profile.id).single()
+      .then(({ data }) => { if (data?.photo_url) setPhotoUrl(data.photo_url) })
+  }, [profile?.id])
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return }
+    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); return }
+    setUploading(true)
+    try {
+      const ext  = file.name.split('.').pop()
+      const path = `${profile.id}.${ext}`
+      await supabase.storage.from('lecturer-photos').upload(path, file, { upsert: true, contentType: file.type })
+      const { data: pub } = supabase.storage.from('lecturer-photos').getPublicUrl(path)
+      const url = pub?.publicUrl
+      if (!url) throw new Error('Could not get photo URL')
+      await supabase.from('users').update({ photo_url: url }).eq('id', profile.id)
+      setPhotoUrl(url)
+      setPhotoFailed(false)
+      toast('Photo updated', 'success')
+    } catch (err) {
+      toast(err.message || 'Upload failed', 'error')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   async function handlePasswordChange(e) {
     e.preventDefault()
@@ -54,9 +89,25 @@ export default function LecturerProfilePage() {
 
         {/* Avatar + name card */}
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', padding: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #2FA084, #1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(47,160,132,0.35)' }}>
-            {getInitials(profile?.name || 'L')}
-          </div>
+          {/* Clickable avatar */}
+          <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+          <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Click to upload photo"
+            style={{ position: 'relative', width: 72, height: 72, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, background: 'transparent' }}>
+            {photoUrl && !photoFailed ? (
+              <img src={photoUrl} alt={profile?.name} onError={() => setPhotoFailed(true)}
+                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block', boxShadow: '0 4px 12px rgba(47,160,132,0.25)' }} />
+            ) : (
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #2FA084, #1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: '#fff', boxShadow: '0 4px 12px rgba(47,160,132,0.35)' }}>
+                {uploading ? <Spinner size={22} color="white" /> : getInitials(profile?.name || 'L')}
+              </div>
+            )}
+            {/* Camera overlay badge */}
+            {!uploading && (
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: '#2FA084', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Camera size={11} color="#fff" strokeWidth={2.5} />
+              </div>
+            )}
+          </button>
           <div>
             <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>{profile?.name}</h2>
             <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#2FA084', fontWeight: 600 }}>Lecturer · EEE Department</p>

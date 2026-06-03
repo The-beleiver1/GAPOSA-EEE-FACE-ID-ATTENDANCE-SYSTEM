@@ -8,7 +8,22 @@ import { getCourses } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
-import { LEVELS } from '@/utils'
+import { LEVELS, getInitials } from '@/utils'
+
+function StudentAvatar({ name, photoUrl, size = 28 }) {
+  const [failed, setFailed] = useState(false)
+  if (photoUrl && !failed) {
+    return (
+      <img src={photoUrl} alt={name} onError={() => setFailed(true)}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #e2e8f0' }} />
+    )
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#2FA084,#1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+      {getInitials(name)}
+    </div>
+  )
+}
 
 function getCourseShort(matric) {
   if (!matric) return '—'
@@ -276,7 +291,12 @@ export default function StudentsPage() {
               )}
               {paginated.map(s => (
                 <tr key={s.matric} style={{ borderBottom: '1px solid #f9fafb' }}>
-                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: '#1e293b' }}>{s.name}</td>
+                  <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden' }}>
+                      <StudentAvatar name={s.name} photoUrl={s.photo_url} />
+                      <span style={{ fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem' }}>{s.name}</span>
+                    </div>
+                  </td>
                   <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.62rem', color: '#6b7280' }}>{s.matric}</td>
                   <td style={{ padding: '0.45rem 0.4rem', color: '#6b7280' }}>{s.level}</td>
                   <td style={{ padding: '0.45rem 0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#374151' }}>{getCourseShort(s.matric)}</td>
