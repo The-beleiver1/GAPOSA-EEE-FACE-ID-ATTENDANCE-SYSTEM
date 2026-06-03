@@ -17,7 +17,7 @@ export default function LecturerProfilePage() {
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
   const [photoUrl,    setPhotoUrl]    = useState(null)
-  const [photoFailed, setPhotoFailed] = useState(false)
+  const [previewUrl,  setPreviewUrl]  = useState(null) // local blob — shows instantly
   const [uploading,   setUploading]   = useState(false)
 
   useEffect(() => {
@@ -26,11 +26,19 @@ export default function LecturerProfilePage() {
       .then(({ data }) => { if (data?.photo_url) setPhotoUrl(data.photo_url) })
   }, [profile?.id])
 
+  // Clean up blob URL on unmount
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return }
     if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); return }
+
+    // Show local preview immediately — no network wait
+    const blob = URL.createObjectURL(file)
+    setPreviewUrl(blob)
+
     setUploading(true)
     try {
       const ext  = file.name.split('.').pop()
@@ -40,10 +48,13 @@ export default function LecturerProfilePage() {
       const url = pub?.publicUrl
       if (!url) throw new Error('Could not get photo URL')
       await supabase.from('users').update({ photo_url: url }).eq('id', profile.id)
-      setPhotoUrl(url)
-      setPhotoFailed(false)
+      // Replace blob preview with permanent URL (cache-busted)
+      setPhotoUrl(`${url}?t=${Date.now()}`)
+      URL.revokeObjectURL(blob)
+      setPreviewUrl(null)
       toast('Photo updated', 'success')
     } catch (err) {
+      setPreviewUrl(null)
       toast(err.message || 'Upload failed', 'error')
     } finally {
       setUploading(false)
@@ -91,22 +102,25 @@ export default function LecturerProfilePage() {
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(31,111,95,0.07)', padding: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {/* Clickable avatar */}
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-          <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Click to upload photo"
-            style={{ position: 'relative', width: 72, height: 72, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, background: 'transparent' }}>
-            {photoUrl && !photoFailed ? (
-              <img src={photoUrl} alt={profile?.name} onError={() => setPhotoFailed(true)}
+          <button onClick={() => !uploading && fileRef.current?.click()} title="Click to change photo"
+            style={{ position: 'relative', width: 72, height: 72, borderRadius: '50%', border: 'none', padding: 0, cursor: uploading ? 'default' : 'pointer', flexShrink: 0, background: 'transparent' }}>
+            {/* Show local blob preview first, then persisted URL, then initials */}
+            {(previewUrl || photoUrl) ? (
+              <img src={previewUrl || photoUrl} alt={profile?.name}
+                onError={() => { setPreviewUrl(null); setPhotoUrl(null) }}
                 style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block', boxShadow: '0 4px 12px rgba(47,160,132,0.25)' }} />
             ) : (
               <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #2FA084, #1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: '#fff', boxShadow: '0 4px 12px rgba(47,160,132,0.35)' }}>
-                {uploading ? <Spinner size={22} color="white" /> : getInitials(profile?.name || 'L')}
+                {getInitials(profile?.name || 'L')}
               </div>
             )}
-            {/* Camera overlay badge */}
-            {!uploading && (
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: '#2FA084', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Camera size={11} color="#fff" strokeWidth={2.5} />
-              </div>
-            )}
+            {/* Camera badge — white bg so it's visible over any avatar */}
+            <div style={{ position: 'absolute', bottom: 1, right: 1, width: 22, height: 22, borderRadius: '50%', background: '#fff', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
+              {uploading
+                ? <Spinner size={11} color="brand" />
+                : <Camera size={12} color="#1F6F5F" strokeWidth={2.2} />
+              }
+            </div>
           </button>
           <div>
             <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>{profile?.name}</h2>
