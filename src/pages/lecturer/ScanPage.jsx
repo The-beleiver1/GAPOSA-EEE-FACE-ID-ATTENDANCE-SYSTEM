@@ -6,7 +6,7 @@ import { useScanStore } from '@/store/scanStore'
 import { useCamera } from '@/hooks/useCamera'
 import { useToast } from '@/components/ui/Toast'
 import { captureFrameAsBase64, getEmbeddingsFromServer, checkFaceServer } from '@/services/faceService'
-import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, dispatchTelegramNotifications, getScannedWeeks } from '@/services/studentService'
+import { getAllEnrolledStudents, markAttendance, matchFaceInDatabase, dispatchTelegramNotifications, getScannedWeeks, deleteAttendanceRecord } from '@/services/studentService'
 import { getLecturerCourses, getSettings } from '@/services/courseService'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/Modal'
@@ -81,6 +81,9 @@ export default function ScanPage() {
   const [loading,      setLoading]      = useState(true)
   const [showFinalise,  setShowFinalise]  = useState(false)
   const [finalising,    setFinalising]    = useState(false)
+  const [showRestart,   setShowRestart]   = useState(false)
+  const [restarting,    setRestarting]    = useState(false)
+  const [removingMatric, setRemovingMatric] = useState(null)
   const [finaliseResult, setFinaliseResult] = useState(null) // { present, absent, course, week } after success
 
   const scanIntervalRef        = useRef(null)
@@ -350,6 +353,61 @@ export default function ScanPage() {
 
   function handleReject() {
     scan.setPendingApproval(null); scan.setScanning(false)
+  }
+
+  // Remove one student from present list + delete their DB record → allows rescan
+  async function handleRemoveStudent(student) {
+    setRemovingMatric(student.matric)
+    try {
+      await deleteAttendanceRecord({
+        matric:    student.matric,
+        courseId:  scan.activeCourse?.id,
+        week:      scan.activeWeek,
+        semester:  scan.semester,
+        session:   scan.session,
+      })
+      scan.removePresent(student.matric)
+      // Also remove from offline queue if queued while offline
+      const QUEUE_KEY = 'gaposa_offline_queue'
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+      const filtered = q.filter(r => !(r.matric === student.matric && r.courseId === scan.activeCourse?.id && r.week === scan.activeWeek))
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(filtered))
+      toast(`${student.name} removed — can be rescanned`, 'success')
+    } catch {
+      toast('Failed to remove student', 'error')
+    } finally {
+      setRemovingMatric(null)
+    }
+  }
+
+  // Restart: wipe all present records for this week/course from DB + clear local session
+  async function handleRestart() {
+    setRestarting(true)
+    try {
+      for (const student of scan.presentList) {
+        await deleteAttendanceRecord({
+          matric:   student.matric,
+          courseId: scan.activeCourse?.id,
+          week:     scan.activeWeek,
+          semester: scan.semester,
+          session:  scan.session,
+        }).catch(() => {})
+      }
+      // Clear offline queue entries for this course/week
+      const QUEUE_KEY = 'gaposa_offline_queue'
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(
+        q.filter(r => !(r.courseId === scan.activeCourse?.id && r.week === scan.activeWeek))
+      ))
+      scan.resetSession()
+      handleStopCamera()
+      setShowRestart(false)
+      toast('Session cleared — ready to restart', 'success')
+    } catch {
+      toast('Failed to clear session', 'error')
+    } finally {
+      setRestarting(false)
+    }
   }
 
   async function handleFinalise() {
@@ -910,7 +968,12 @@ export default function ScanPage() {
 
               {/* Present list */}
               <div style={{ background:'#fff', borderRadius:13, border:'1px solid #f1f5f9', padding:'0.75rem', boxShadow:'0 2px 12px rgba(31,111,95,0.07)', flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 }}>
-                <p style={{ margin:'0 0 0.4rem', fontSize:'0.55rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', flexShrink:0 }}>Present · {present}</p>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.4rem', flexShrink:0 }}>
+                  <p style={{ margin:0, fontSize:'0.55rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em' }}>Present · {present}</p>
+                  {present > 0 && (
+                    <span style={{ fontSize:'0.52rem', color:'#94a3b8', fontWeight:600 }}>× to remove &amp; rescan</span>
+                  )}
+                </div>
                 {present === 0
                   ? <p style={{ margin:0, fontSize:'0.68rem', color:'#e2e8f0', fontWeight:600, textAlign:'center', padding:'0.5rem 0' }}>None yet</p>
                   : <div style={{ overflowY:'auto', display:'flex', flexDirection:'column', gap:'0.22rem' }}>
@@ -919,11 +982,28 @@ export default function ScanPage() {
                           <div style={{ width:5, height:5, borderRadius:'50%', background:'#22c55e', flexShrink:0 }}/>
                           <span style={{ flex:1, fontSize:'0.7rem', fontWeight:600, color:'#1e293b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</span>
                           <span style={{ fontSize:'0.58rem', color:'#94a3b8', fontFamily:'monospace', flexShrink:0 }}>{s.matric}</span>
+                          {/* Remove button */}
+                          <button onClick={() => handleRemoveStudent(s)} disabled={removingMatric === s.matric}
+                            title="Remove and allow rescan"
+                            style={{ width:16, height:16, borderRadius:'50%', border:'none', background:'rgba(239,68,68,0.12)', color:'#dc2626', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.6rem', fontWeight:900, lineHeight:1, opacity: removingMatric === s.matric ? 0.4 : 1 }}>
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
                 }
               </div>
+
+              {/* Restart + Finalise */}
+              <button onClick={() => setShowRestart(true)} disabled={present === 0}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem', padding:'0.52rem', borderRadius:9, border:'1.5px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.04)', color: present === 0 ? '#cbd5e1' : '#dc2626', fontWeight:700, fontSize:'0.75rem', cursor: present === 0 ? 'not-allowed' : 'pointer', fontFamily:'inherit', transition:'background 0.18s' }}
+                onMouseEnter={e => { if(present > 0) e.currentTarget.style.background='rgba(239,68,68,0.09)' }}
+                onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.04)'}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:12,height:12}}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                </svg>
+                Restart Session
+              </button>
 
               {/* Finalise */}
               <button onClick={() => setShowFinalise(true)}
@@ -949,6 +1029,17 @@ export default function ScanPage() {
           100% { opacity:1; transform:translateY(0) scale(1); }
         }
       `}</style>
+
+      <ConfirmModal
+        open={showRestart}
+        onClose={() => setShowRestart(false)}
+        onConfirm={handleRestart}
+        title="Restart Session"
+        message={`This will remove all ${present} present record${present !== 1 ? 's' : ''} for this class from the database and clear the session. The lecturer can then rescan from scratch. Continue?`}
+        confirmLabel="Yes, Restart"
+        loading={restarting}
+        danger
+      />
 
       <ConfirmModal
         open={showFinalise}

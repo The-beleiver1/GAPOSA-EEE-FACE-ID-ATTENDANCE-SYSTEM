@@ -42,6 +42,16 @@ export const useScanStore = create((set, get) => ({
     absentList: [...s.absentList.filter(x => x.matric !== student.matric), student],
   })),
 
+  // Remove a student from present list + scannedToday so they can be rescanned
+  removePresent: (matric) => set(s => {
+    const next = new Set(s.scannedToday)
+    next.delete(matric)
+    return {
+      presentList:  s.presentList.filter(x => x.matric !== matric),
+      scannedToday: next,
+    }
+  }),
+
   isAlreadyScanned: (matric) => get().scannedToday.has(matric),
 
   resetSession: () => set({

@@ -362,6 +362,18 @@ export async function hasStudentPin(matric) {
   return Boolean(data?.pin)
 }
 
+export async function deleteAttendanceRecord({ matric, courseId, week, semester, session }) {
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('matric',    matric)
+    .eq('course_id', courseId)
+    .eq('week',      week)
+    .eq('semester',  semester)
+    .eq('session',   session)
+  if (error) throw new Error(error.message)
+}
+
 export async function updateAttendanceRecord(id, status) {
   const { error } = await supabase
     .from('attendance')
