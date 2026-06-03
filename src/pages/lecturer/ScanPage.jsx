@@ -309,7 +309,7 @@ export default function ScanPage() {
       })
       store.markPresent(student)
       toast(navigator.onLine ? `✓ ${student.name} — present` : `✓ ${student.name} — queued (offline)`, 'success')
-    } catch { toast('Failed to save attendance', 'error') }
+    } catch (err) { toast(err?.message || 'Failed to save attendance', 'error') }
   }
 
   function handleDismissWrongLevel() {
@@ -331,7 +331,7 @@ export default function ScanPage() {
       })
       scan.markPresent(student)
       toast(`${student.name} (${student.level}) — force accepted`, 'success')
-    } catch { toast('Failed to save', 'error') }
+    } catch (err) { toast(err?.message || 'Failed to save', 'error') }
     finally { setScanStatus('idle'); setWrongLevelStudent(null) }
   }
 
@@ -347,7 +347,7 @@ export default function ScanPage() {
       })
       scan.markPresent(student)
       toast(`${student.name} — present`, 'success')
-    } catch { toast('Failed to save', 'error') }
+    } catch (err) { toast(err?.message || 'Failed to save', 'error') }
     finally { scan.setPendingApproval(null); scan.setScanning(false) }
   }
 
@@ -442,7 +442,7 @@ export default function ScanPage() {
         return next
       })
       dispatchAttendanceNotifications(presentStudents, absentStudents, course, week).catch(() => {})
-    } catch { toast('Failed to finalise', 'error') }
+    } catch (err) { toast(err?.message || 'Failed to finalise', 'error') }
     finally { setFinalising(false); setShowFinalise(false) }
   }
 
@@ -464,7 +464,7 @@ export default function ScanPage() {
       status === 'present' ? scan.markPresent(student) : scan.markAbsent(student)
       toast(`${student.name} marked ${status} (manual)`, 'success')
       setManualMatric('')
-    } catch { toast('Failed to save attendance', 'error') }
+    } catch (err) { toast(err?.message || 'Failed to save attendance', 'error') }
     finally { setManualMarking(false) }
   }
 

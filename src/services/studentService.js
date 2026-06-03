@@ -283,9 +283,7 @@ export async function markAttendance({
 }) {
   if (!matric) throw new Error('Matric is required')
 
-  // Upsert instead of insert — handles re-scans after removal without
-  // constraint violations on (matric, course_id, week, semester, session)
-  const { error } = await supabase.from('attendance').upsert({
+  const row = {
     matric:      String(matric),
     name:        name       || '',
     course_id:   courseId   || null,
@@ -298,9 +296,31 @@ export async function markAttendance({
     session:     session    || '',
     date:        new Date().toLocaleDateString('en-GB'),
     timestamp:   new Date().toISOString(),
-  }, { onConflict: 'matric,course_id,week,semester,session' })
+  }
 
-  if (error) throw new Error(error.message)
+  // Check if a record already exists for this slot (re-scan after removal)
+  const { data: existing } = await supabase
+    .from('attendance')
+    .select('id')
+    .eq('matric',    String(matric))
+    .eq('course_id', courseId || null)
+    .eq('week',      week     || 1)
+    .eq('semester',  semester || '')
+    .eq('session',   session  || '')
+    .maybeSingle()
+
+  let dbError
+  if (existing?.id) {
+    // Record exists — update it (handles re-scan where delete may not have fully propagated)
+    const { error } = await supabase.from('attendance').update(row).eq('id', existing.id)
+    dbError = error
+  } else {
+    // No record — fresh insert
+    const { error } = await supabase.from('attendance').insert(row)
+    dbError = error
+  }
+
+  if (dbError) throw new Error(dbError.message)
   return true
 }
 
