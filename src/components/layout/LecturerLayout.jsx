@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Scan, CalendarCheck, Users, BookOpen, BarChart3, CircleUser, LogOut, Menu, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/services/authService'
-import { supabase } from '@/lib/supabase'
 import { useAutoLogout } from '@/hooks/useAutoLogout'
 import { useToast } from '@/components/ui/Toast'
 import { getInitials } from '@/utils'
@@ -27,24 +26,8 @@ export function LecturerLayout({ children }) {
   const [open, setOpen] = useState(false)
   useAutoLogout()
 
-  // Reject stale blob: URLs. If no valid URL in store, fetch from DB once on mount.
-  const storedPhoto = profile?.photo_url?.startsWith('blob:') ? null : (profile?.photo_url || null)
-  const [photoUrl, setPhotoUrl] = useState(storedPhoto)
-
-  useEffect(() => {
-    setPhotoUrl(storedPhoto)
-  }, [storedPhoto])
-
-  useEffect(() => {
-    if (storedPhoto || !profile?.id) return
-    supabase.from('users').select('photo_url').eq('id', profile.id).single()
-      .then(({ data }) => {
-        if (data?.photo_url && !data.photo_url.startsWith('blob:')) {
-          setPhotoUrl(data.photo_url)
-          setProfile({ ...profile, photo_url: data.photo_url })
-        }
-      })
-  }, [profile?.id])
+  // Only accept data: URLs (base64 thumbnails) — blob: URLs are session-only and invalid after reload
+  const photoUrl = profile?.photo_url?.startsWith('data:') ? profile.photo_url : null
 
   async function handleLogout() {
     await signOut(); logout(); navigate('/'); toast('Logged out', 'success')

@@ -8,6 +8,25 @@ import { getInitials } from '@/utils'
 import { supabase } from '@/lib/supabase'
 import { Spinner } from '@/components/ui/Spinner'
 
+// Resize photo to a small base64 thumbnail — stored directly in DB, no storage bucket needed
+function makeThumbnail(dataUrl, size = 160) {
+  return new Promise(resolve => {
+    try {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(size / img.width, size / img.height, 1)
+        const canvas = document.createElement('canvas')
+        canvas.width  = Math.round(img.width  * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.onerror = () => resolve(null)
+      img.src = dataUrl
+    } catch { resolve(null) }
+  })
+}
+
 export default function LecturerProfilePage() {
   const { profile } = useAuthStore()
   const { toast } = useToast()
@@ -16,35 +35,30 @@ export default function LecturerProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState(null) // blob — survives the whole session
-  const [uploading,  setUploading]  = useState(false)
+  const [uploading, setUploading] = useState(false)
   const { setProfile } = useAuthStore()
-
-  // Revoke blob only when component unmounts
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [])
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return }
     if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); return }
-
-    // Show blob immediately for this session only — never save blob to auth store
-    const blob = URL.createObjectURL(file)
-    setPreviewUrl(blob)
-
     setUploading(true)
     try {
-      const ext  = file.name.split('.').pop()
-      const path = `${profile.id}.${ext}`
-      await supabase.storage.from('lecturer-photos').upload(path, file, { upsert: true, contentType: file.type })
-      const { data: pub } = supabase.storage.from('lecturer-photos').getPublicUrl(path)
-      const persistentUrl = pub?.publicUrl
-      if (persistentUrl) {
-        await supabase.from('users').update({ photo_url: persistentUrl }).eq('id', profile.id)
-        // Save real URL (not blob) to auth store — persists across sessions correctly
-        setProfile({ ...profile, photo_url: persistentUrl })
-      }
+      // Read file as data URL, then shrink to 160×160 thumbnail
+      const dataUrl = await new Promise((res, rej) => {
+        const reader = new FileReader()
+        reader.onload  = ev => res(ev.target.result)
+        reader.onerror = rej
+        reader.readAsDataURL(file)
+      })
+      const thumbnail = await makeThumbnail(dataUrl, 160)
+      if (!thumbnail) throw new Error('Could not process image')
+
+      // Save base64 thumbnail directly in users.photo_url — no storage bucket required
+      await supabase.from('users').update({ photo_url: thumbnail }).eq('id', profile.id)
+      // Update auth store so sidebar refreshes immediately and survives page reload
+      setProfile({ ...profile, photo_url: thumbnail })
       toast('Photo updated', 'success')
     } catch (err) {
       toast(err.message || 'Upload failed', 'error')
@@ -54,9 +68,8 @@ export default function LecturerProfilePage() {
     }
   }
 
-  // previewUrl (fresh blob) > real Supabase URL from store (reject stale blobs from localStorage)
-  const storedUrl    = profile?.photo_url?.startsWith('blob:') ? null : (profile?.photo_url || null)
-  const displayPhoto = previewUrl || storedUrl
+  // Read photo from auth store — base64 data URLs survive page reload unlike blob: URLs
+  const displayPhoto = profile?.photo_url?.startsWith('data:') ? profile.photo_url : null
 
   async function handlePasswordChange(e) {
     e.preventDefault()
