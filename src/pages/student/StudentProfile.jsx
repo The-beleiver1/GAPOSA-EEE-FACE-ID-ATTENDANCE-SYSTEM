@@ -36,7 +36,7 @@ export default function StudentProfile() {
     if (!matric) return
     const { data } = await supabase
       .from('students')
-      .select('matric,name,level,option,enrolled,telegram_chat_id')
+      .select('matric,name,level,option,enrolled,telegram_chat_id,photo_url')
       .ilike('matric', matric)
       .single()
     setStudent(data)
@@ -133,10 +133,17 @@ export default function StudentProfile() {
         {/* ── Identity card ── */}
         <div style={CARD}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {student?.photo_url ? (
+              <img src={student.photo_url} alt={student.name}
+                style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: '0 3px 14px rgba(31,111,95,0.3)', border: '2px solid rgba(47,160,132,0.3)' }}
+                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+              />
+            ) : null}
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
               background: 'linear-gradient(135deg,#1F6F5F,#2FA084)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: student?.photo_url ? 'none' : 'flex',
+              alignItems: 'center', justifyContent: 'center',
               fontSize: '1.15rem', fontWeight: 900, color: '#fff',
               flexShrink: 0, letterSpacing: '0.04em',
               boxShadow: '0 3px 14px rgba(31,111,95,0.3)',

@@ -4,6 +4,25 @@ import { supabase } from '@/lib/supabase'
 const FACE_SERVER = 'https://beleiver1-gaposa-face-server.hf.space'
 const DEV = import.meta.env.DEV
 
+// ── Resize photo to a small thumbnail (≤150px) as base64 ─────────
+function makeThumbnail(dataUrl, size = 150) {
+  return new Promise(resolve => {
+    try {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(size / img.width, size / img.height, 1)
+        const canvas = document.createElement('canvas')
+        canvas.width  = Math.round(img.width  * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.72))
+      }
+      img.onerror = () => resolve(null)
+      img.src = dataUrl
+    } catch { resolve(null) }
+  })
+}
+
 // ── Save ArcFace embeddings after enrollment ──────────────────────
 export async function saveStudentDescriptors(matric, descriptors, photoDataUrl) {
   if (!matric) throw new Error('Matric number is required')
@@ -16,17 +35,26 @@ export async function saveStudentDescriptors(matric, descriptors, photoDataUrl) 
     .ilike('matric', String(matric))
     .single()
 
-  // Upload enrollment photo to Supabase storage (best effort)
+  // Try to upload to storage bucket; fall back to small base64 thumbnail stored in DB
   let photoUrl = null
   if (photoDataUrl) {
     try {
-      const res   = await fetch(photoDataUrl)
-      const blob  = await res.blob()
-      const path  = `${String(matric)}.jpg`
-      await supabase.storage.from('student - photos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
-      const { data: pub } = supabase.storage.from('student - photos').getPublicUrl(path)
-      photoUrl = pub?.publicUrl || null
-    } catch { /* storage bucket may not exist yet — silently skip */ }
+      const res  = await fetch(photoDataUrl)
+      const blob = await res.blob()
+      const path = `${String(matric)}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('student - photos')
+        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+      if (!uploadError) {
+        const { data: pub } = supabase.storage.from('student - photos').getPublicUrl(path)
+        photoUrl = pub?.publicUrl || null
+      }
+    } catch { /* storage unavailable */ }
+
+    // Fallback: store a 150×150 thumbnail as base64 directly in the DB
+    if (!photoUrl) {
+      photoUrl = await makeThumbnail(photoDataUrl, 150)
+    }
   }
 
   // Upsert student record
