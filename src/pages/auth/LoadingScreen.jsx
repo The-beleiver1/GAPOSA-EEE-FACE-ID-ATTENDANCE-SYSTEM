@@ -116,9 +116,17 @@ export default function LoadingScreen({ progress, message }) {
       </div>
 
       {/* Bottom credit */}
-      <p style={{ position:"absolute", bottom:"1.5rem", zIndex:10, color:"rgba(255,255,255,0.25)", fontSize:"0.7rem", letterSpacing:"0.04em", margin:0, textAlign:"center" }}>
-        Gateway ICT Polytechnic Saapade · EEE Department
-      </p>
+      <div style={{ position:"absolute", bottom:"1.5rem", zIndex:10, display:"flex", flexDirection:"column", alignItems:"center", gap:"0.35rem" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.4rem", background:"rgba(47,160,132,0.22)", border:"1px solid rgba(111,207,151,0.35)", borderRadius:99, padding:"4px 16px" }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:"#6FCF97", display:"inline-block", flexShrink:0 }} />
+          <p style={{ margin:0, color:"rgba(255,255,255,0.88)", fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>
+            Gateway ICT Polytechnic Saapade
+          </p>
+        </div>
+        <p style={{ margin:0, color:"rgba(255,255,255,0.55)", fontSize:"0.6rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase" }}>
+          EEE Department · Face-ID Attendance System
+        </p>
+      </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Albert Sans:wght@300;400;500;600;700;800;900&display=swap');

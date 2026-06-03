@@ -260,8 +260,9 @@ export default function LandingPage() {
         </div>
 
         {/* ── Footer ── */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0.7rem 1.8rem', textAlign: 'center', background: 'rgba(0,0,0,0.12)' }}>
-          <p style={{ margin: 0, color: 'rgba(255,255,255,0.22)', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', padding: '0.75rem 1.8rem', textAlign: 'center', background: 'rgba(0,0,0,0.18)' }}>
+          <p style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'rgba(255,255,255,0.82)', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'rgba(47,160,132,0.22)', border: '1px solid rgba(111,207,151,0.35)', borderRadius: 99, padding: '4px 14px' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6FCF97', display: 'inline-block', flexShrink: 0 }} />
             Face-ID Attendance Management System · v1.0
           </p>
         </div>
