@@ -283,7 +283,9 @@ export async function markAttendance({
 }) {
   if (!matric) throw new Error('Matric is required')
 
-  const { error } = await supabase.from('attendance').insert({
+  // Upsert instead of insert — handles re-scans after removal without
+  // constraint violations on (matric, course_id, week, semester, session)
+  const { error } = await supabase.from('attendance').upsert({
     matric:      String(matric),
     name:        name       || '',
     course_id:   courseId   || null,
@@ -296,7 +298,7 @@ export async function markAttendance({
     session:     session    || '',
     date:        new Date().toLocaleDateString('en-GB'),
     timestamp:   new Date().toISOString(),
-  })
+  }, { onConflict: 'matric,course_id,week,semester,session' })
 
   if (error) throw new Error(error.message)
   return true
