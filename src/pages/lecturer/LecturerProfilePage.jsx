@@ -16,18 +16,12 @@ export default function LecturerProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
-  const [photoUrl,    setPhotoUrl]    = useState(null)
-  const [previewUrl,  setPreviewUrl]  = useState(null) // local blob — shows instantly
-  const [uploading,   setUploading]   = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(null) // blob — survives the whole session
+  const [uploading,  setUploading]  = useState(false)
+  const { setProfile } = useAuthStore()
 
-  useEffect(() => {
-    if (!profile?.id) return
-    supabase.from('users').select('photo_url').eq('id', profile.id).single()
-      .then(({ data }) => { if (data?.photo_url) setPhotoUrl(data.photo_url) })
-  }, [profile?.id])
-
-  // Clean up blob URL on unmount
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+  // Revoke blob only when component unmounts
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [])
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0]
@@ -35,9 +29,11 @@ export default function LecturerProfilePage() {
     if (!file.type.startsWith('image/')) { toast('Please select an image file', 'error'); return }
     if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); return }
 
-    // Show local preview immediately — no network wait
+    // 1. Show photo instantly from local device — never revoke this blob this session
     const blob = URL.createObjectURL(file)
     setPreviewUrl(blob)
+    // Update auth store so the sidebar shows the photo immediately
+    setProfile({ ...profile, photo_url: blob })
 
     setUploading(true)
     try {
@@ -45,22 +41,22 @@ export default function LecturerProfilePage() {
       const path = `${profile.id}.${ext}`
       await supabase.storage.from('lecturer-photos').upload(path, file, { upsert: true, contentType: file.type })
       const { data: pub } = supabase.storage.from('lecturer-photos').getPublicUrl(path)
-      const url = pub?.publicUrl
-      if (!url) throw new Error('Could not get photo URL')
-      await supabase.from('users').update({ photo_url: url }).eq('id', profile.id)
-      // Replace blob preview with permanent URL (cache-busted)
-      setPhotoUrl(`${url}?t=${Date.now()}`)
-      URL.revokeObjectURL(blob)
-      setPreviewUrl(null)
+      const persistentUrl = pub?.publicUrl
+      if (persistentUrl) {
+        // Save permanent URL to DB for future sessions (background — don't block UI)
+        await supabase.from('users').update({ photo_url: persistentUrl }).eq('id', profile.id)
+      }
       toast('Photo updated', 'success')
     } catch (err) {
-      setPreviewUrl(null)
       toast(err.message || 'Upload failed', 'error')
     } finally {
       setUploading(false)
       e.target.value = ''
     }
   }
+
+  // Displayed photo: local blob preview > persisted store URL > nothing (initials)
+  const displayPhoto = previewUrl || profile?.photo_url || null
 
   async function handlePasswordChange(e) {
     e.preventDefault()
@@ -104,10 +100,8 @@ export default function LecturerProfilePage() {
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
           <button onClick={() => !uploading && fileRef.current?.click()} title="Click to change photo"
             style={{ position: 'relative', width: 72, height: 72, borderRadius: '50%', border: 'none', padding: 0, cursor: uploading ? 'default' : 'pointer', flexShrink: 0, background: 'transparent' }}>
-            {/* Show local blob preview first, then persisted URL, then initials */}
-            {(previewUrl || photoUrl) ? (
-              <img src={previewUrl || photoUrl} alt={profile?.name}
-                onError={() => { setPreviewUrl(null); setPhotoUrl(null) }}
+            {displayPhoto ? (
+              <img src={displayPhoto} alt={profile?.name}
                 style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block', boxShadow: '0 4px 12px rgba(47,160,132,0.25)' }} />
             ) : (
               <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #2FA084, #1F6F5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: '#fff', boxShadow: '0 4px 12px rgba(47,160,132,0.35)' }}>
